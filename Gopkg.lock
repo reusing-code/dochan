@@ -2,14 +2,26 @@
 
 
 [[projects]]
+  name = "github.com/karrick/godirwalk"
+  packages = ["."]
+  revision = "500f500f39a3c6f8ef40192026cac7c0ee71e7e3"
+  version = "v1.7.0"
+
+[[projects]]
   branch = "master"
   name = "github.com/kokardy/saxlike"
   packages = ["."]
   revision = "8509aeb1f6e7da2b381d7106f5cd80dcddf160dd"
 
+[[projects]]
+  name = "github.com/pkg/errors"
+  packages = ["."]
+  revision = "645ef00459ed84a119197bfb8d8205042c6df63d"
+  version = "v0.8.0"
+
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "c5fe507e892c17f9296bbe187886d67d4dfca67b5f5cd9f4bc6e33b7b9cb5d20"
+  inputs-digest = "c6cceaa97c6464cc898fbb273f76c007728499f96b121393dc3d4d4f0df05638"
   solver-name = "gps-cdcl"
   solver-version = 1

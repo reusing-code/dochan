@@ -27,9 +27,11 @@ var tempDir string = "temp/"
 
 func parsePDF(path string) (*Document, error) {
 	os.MkdirAll(tempDir, 0777)
+	defer os.RemoveAll(tempDir)
+
 	cmd := exec.Command("pdftohtml", "-xml", path, tempDir+"temp.xml")
 	cmd.Stderr = os.Stderr
-	defer os.RemoveAll(tempDir)
+
 	err := cmd.Run()
 	if err != nil {
 		return nil, err
