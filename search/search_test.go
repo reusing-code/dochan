@@ -39,6 +39,10 @@ var searchTests = []struct {
 	{query: "Kanele", result: false},
 	{query: "Kanaele", result: false},
 	{query: "Kan äle", result: false},
+	{query: "2009", result: true},
+	{query: "2010", result: false},
+	{query: "C++", result: true},
+	{query: "C+++++---/(&", result: true}, // hm...
 }
 
 func TestSearch(t *testing.T) {
