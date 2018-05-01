@@ -37,6 +37,7 @@ var searchTests = []struct {
 	{query: "kanale", result: true},
 	{query: "känäle", result: true},
 	{query: "Kanele", result: false},
+	{query: "Kanöle", result: false},
 	{query: "Kanaele", result: false},
 	{query: "Kan äle", result: false},
 	{query: "2009", result: true},
