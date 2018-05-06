@@ -19,7 +19,7 @@ var expectedString = []struct {
 }
 
 func TestParsePDF(t *testing.T) {
-	doc, err := parsePDF("testdata/Projektvorschlag.pdf")
+	doc, err := ParsePDF("testdata/Projektvorschlag.pdf")
 	if err != nil {
 		t.Fatalf("error parsing pdf: %q", err)
 	}

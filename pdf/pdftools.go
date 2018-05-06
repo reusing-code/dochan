@@ -25,7 +25,7 @@ type textBlock struct {
 
 var tempDir string = "temp/"
 
-func parsePDF(path string) (*Document, error) {
+func ParsePDF(path string) (*Document, error) {
 	os.MkdirAll(tempDir, 0777)
 	defer os.RemoveAll(tempDir)
 
@@ -42,4 +42,14 @@ func parsePDF(path string) (*Document, error) {
 		return nil, err
 	}
 	return doc, nil
+}
+
+func (d *Document) GetText() []string {
+	result := make([]string, 0)
+	for _, page := range d.pages {
+		for _, tb := range page.blocks {
+			result = append(result, tb.text)
+		}
+	}
+	return result
 }

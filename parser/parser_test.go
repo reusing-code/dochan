@@ -3,6 +3,7 @@ package parser
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -26,7 +27,7 @@ func createEmptyFile(baseDir string, path string) error {
 	return err
 }
 
-func TestParse(t *testing.T) {
+func TestGetFilenames(t *testing.T) {
 	os.MkdirAll(tempDir, 0777)
 	defer os.RemoveAll(tempDir)
 
@@ -43,7 +44,7 @@ func TestParse(t *testing.T) {
 		}
 	}
 
-	fileList, err := ParseDir(tempDir)
+	fileList, err := getFileNames(tempDir)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -58,13 +59,45 @@ func TestParse(t *testing.T) {
 		}
 		found := false
 		for _, parsedFile := range fileList {
-			if parsedFile == tc.filePath {
+			if parsedFile == filepath.Join(tempDir, tc.filePath) {
 				found = true
 				break
 			}
 		}
 		if !found {
 			t.Errorf("File %q not found.", tc.filePath)
+		}
+	}
+
+}
+
+var parseDirTestCases = []struct {
+	filename      string
+	containedText string
+}{
+	{filename: "A.pdf", containedText: "TestStringA"},
+	{filename: "B.pdf", containedText: "OtherStringB"},
+	{filename: "C.pdf", containedText: "ThirdStringC"},
+}
+
+func TestParseDir(t *testing.T) {
+
+	results := make(map[string][]string)
+
+	ParseDir("testdata", func(filename string, data []string) {
+		filename = filepath.Base(filename)
+		results[filename] = data
+	})
+
+	for _, tc := range parseDirTestCases {
+		resultData := results[tc.filename]
+		if resultData == nil || len(resultData) == 0 {
+			t.Errorf("File %q not parsed correctly. No data found", tc.filename)
+			continue
+		}
+
+		if !strings.Contains(resultData[0], tc.containedText) {
+			t.Errorf("Text %q not found in %q", tc.containedText, resultData[0])
 		}
 	}
 
