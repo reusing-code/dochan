@@ -1,6 +1,10 @@
 package search
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/reusing-code/dochan/search/wiki_testdata"
+)
 
 /**
    	The English test data originates from the Wikipedia article
@@ -56,6 +60,30 @@ func TestSearch(t *testing.T) {
 		res := s.Search(tc.query)
 		if res != tc.result {
 			t.Errorf("Query %q resulted in wrong result. Want %t have %t", tc.query, tc.result, res)
+		}
+	}
+}
+
+var benchSearchWordsDE = []string{
+	"friedrich",
+	"dampfschiff",
+	"keinWorttttttt",
+	"und",
+	"sandkast",
+	"bei",
+}
+
+func BenchmarkWikiDataDE(b *testing.B) {
+	s := MakeSearch()
+	wiki_testdata.ParseDataDE(func(data string) {
+		s.AddString(data)
+	})
+
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		for _, word := range benchSearchWordsDE {
+			s.Search(word)
 		}
 	}
 }
