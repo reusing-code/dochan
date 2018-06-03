@@ -7,6 +7,7 @@ type Search struct {
 type node struct {
 	children map[rune]*node
 	name     rune
+	result   []interface{}
 }
 
 func creatNode(r rune) *node {
@@ -18,20 +19,20 @@ func MakeSearch() *Search {
 	return &Search{root: creatNode(0)}
 }
 
-func (s *Search) AddContent(content []string) {
+func (s *Search) AddContent(content []string, result interface{}) {
 	for _, str := range content {
-		s.AddString(str)
+		s.AddString(str, result)
 	}
 }
 
-func (s *Search) AddString(str string) {
+func (s *Search) AddString(str string, result interface{}) {
 	tokens := Tokenize(str)
 	for _, token := range tokens {
-		s.addToken(token)
+		s.addToken(token, result)
 	}
 }
 
-func (s *Search) addToken(token string) {
+func (s *Search) addToken(token string, result interface{}) {
 	currentNode := s.root
 	for _, r := range token {
 		next, exists := currentNode.children[r]
@@ -41,22 +42,27 @@ func (s *Search) addToken(token string) {
 		}
 		currentNode = next
 	}
+	currentNode.result = append(currentNode.result, result)
 }
 
-func (s *Search) Search(query string) bool {
+func (s *Search) Search(query string) []interface{} {
+	result := make([]interface{}, 0)
 	tokens := Tokenize(query)
 	if len(tokens) > 1 {
 		// multiple search words currently not supported
-		return false
+		return result
 	}
 	token := tokens[0]
 	currentNode := s.root
 	for _, r := range token {
 		next, exists := currentNode.children[r]
 		if !exists {
-			return false
+			return result
 		}
 		currentNode = next
 	}
-	return true
+	if currentNode.result == nil {
+		return result
+	}
+	return currentNode.result
 }

@@ -1,6 +1,7 @@
 package search
 
 import (
+	"reflect"
 	"testing"
 
 	"github.com/reusing-code/dochan/search/wiki_testdata"
@@ -29,37 +30,37 @@ var testDataGer = []string{
 
 var searchTests = []struct {
 	query  string
-	result bool
+	result []interface{}
 }{
-	{query: "language", result: true},
-	{query: "Griesemer", result: true},
-	{query: "griesemer", result: true},
-	{query: "Gries", result: true},
-	{query: "Griesa", result: false},
-	{query: "riesemer", result: false},
-	{query: "Kanäle", result: true},
-	{query: "kanale", result: true},
-	{query: "känäle", result: true},
-	{query: "Kanele", result: false},
-	{query: "Kanöle", result: false},
-	{query: "Kanaele", result: false},
-	{query: "Kan äle", result: false},
-	{query: "2009", result: true},
-	{query: "2010", result: false},
-	{query: "C++", result: true},
-	{query: "C+++++---/(&", result: true}, // hm...
+	{query: "language", result: []interface{}{"en"}},
+	{query: "Griesemer", result: []interface{}{"en", "ger"}},
+	{query: "griesemer", result: []interface{}{"en", "ger"}},
+	{query: "Gries", result: []interface{}{}},
+	{query: "Griesa", result: []interface{}{}},
+	{query: "riesemer", result: []interface{}{}},
+	{query: "Kanäle", result: []interface{}{"ger"}},
+	{query: "kanale", result: []interface{}{"ger"}},
+	{query: "känäle", result: []interface{}{"ger"}},
+	{query: "Kanele", result: []interface{}{}},
+	{query: "Kanöle", result: []interface{}{}},
+	{query: "Kanaele", result: []interface{}{}},
+	{query: "Kan äle", result: []interface{}{}},
+	{query: "2009", result: []interface{}{"en"}},
+	{query: "2010", result: []interface{}{}},
+	{query: "C++", result: []interface{}{"en"}},
+	{query: "C+++++---/(&", result: []interface{}{"en"}}, // hm...
 }
 
 func TestSearch(t *testing.T) {
 	s := MakeSearch()
 
-	s.AddContent(testDataEn)
-	s.AddContent(testDataGer)
+	s.AddContent(testDataEn, "en")
+	s.AddContent(testDataGer, "ger")
 
 	for _, tc := range searchTests {
 		res := s.Search(tc.query)
-		if res != tc.result {
-			t.Errorf("Query %q resulted in wrong result. Want %t have %t", tc.query, tc.result, res)
+		if !reflect.DeepEqual(res, tc.result) {
+			t.Errorf("Query %q resulted in wrong result. Want %v have %v", tc.query, tc.result, res)
 		}
 	}
 }
@@ -76,7 +77,7 @@ var benchSearchWordsDE = []string{
 func BenchmarkWikiDataDE(b *testing.B) {
 	s := MakeSearch()
 	wiki_testdata.ParseDataDE(func(data string) {
-		s.AddString(data)
+		s.AddString(data, "test")
 	})
 
 	b.ResetTimer()
