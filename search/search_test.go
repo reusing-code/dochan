@@ -58,7 +58,34 @@ func TestSearch(t *testing.T) {
 	s.AddContent(testDataGer, "ger")
 
 	for _, tc := range searchTests {
-		res := s.Search(tc.query)
+		res := s.Search(tc.query, false)
+		if !reflect.DeepEqual(res, tc.result) {
+			t.Errorf("Query %q resulted in wrong result. Want %v have %v", tc.query, tc.result, res)
+		}
+	}
+}
+
+var prefixSearchTests = []struct {
+	query  string
+	result []interface{}
+}{
+	{query: "Griesemer", result: []interface{}{"en", "ger"}},
+	{query: "griesemer", result: []interface{}{"en", "ger"}},
+	{query: "Gries", result: []interface{}{"en", "ger"}},
+	{query: "Griese", result: []interface{}{"en", "ger"}},
+	{query: "g", result: []interface{}{"en", "ger"}},
+	{query: "", result: []interface{}{"en", "ger"}},
+	{query: "Griesea", result: []interface{}{}},
+}
+
+func TestPrefixSearch(t *testing.T) {
+	s := MakeSearch()
+
+	s.AddContent(testDataEn, "en")
+	s.AddContent(testDataGer, "ger")
+
+	for _, tc := range prefixSearchTests {
+		res := s.Search(tc.query, true)
 		if !reflect.DeepEqual(res, tc.result) {
 			t.Errorf("Query %q resulted in wrong result. Want %v have %v", tc.query, tc.result, res)
 		}
@@ -84,7 +111,7 @@ func BenchmarkWikiDataDE(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		for _, word := range benchSearchWordsDE {
-			s.Search(word)
+			s.Search(word, false)
 		}
 	}
 }

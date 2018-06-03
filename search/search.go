@@ -11,7 +11,7 @@ type node struct {
 }
 
 func creatNode(r rune) *node {
-	n := &node{children: make(map[rune]*node), name: r}
+	n := &node{children: make(map[rune]*node), name: r, result: make([]interface{}, 0)}
 	return n
 }
 
@@ -45,12 +45,19 @@ func (s *Search) addToken(token string, result interface{}) {
 	currentNode.result = append(currentNode.result, result)
 }
 
-func (s *Search) Search(query string) []interface{} {
+func (s *Search) Search(query string, prefix bool) []interface{} {
 	result := make([]interface{}, 0)
 	tokens := Tokenize(query)
 	if len(tokens) > 1 {
 		// multiple search words currently not supported
 		return result
+	}
+	if len(tokens) == 0 {
+		if prefix {
+			return collectResults(s.root)
+		} else {
+			return result
+		}
 	}
 	token := tokens[0]
 	currentNode := s.root
@@ -61,8 +68,18 @@ func (s *Search) Search(query string) []interface{} {
 		}
 		currentNode = next
 	}
-	if currentNode.result == nil {
-		return result
+	if prefix {
+		return collectResults(currentNode)
+	} else {
+		return currentNode.result
 	}
-	return currentNode.result
+}
+
+func collectResults(n *node) []interface{} {
+	result := make([]interface{}, 0)
+	result = append(result, n.result...)
+	for _, child := range n.children {
+		result = append(result, collectResults(child)...)
+	}
+	return result
 }
