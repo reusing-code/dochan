@@ -1,7 +1,6 @@
 package search
 
 import (
-	"reflect"
 	"testing"
 
 	"github.com/reusing-code/dochan/search/wiki_testdata"
@@ -48,6 +47,7 @@ var searchTests = []struct {
 	{query: "2009", result: []interface{}{"en"}},
 	{query: "2010", result: []interface{}{}},
 	{query: "C++", result: []interface{}{"en"}},
+	{query: "", result: []interface{}{}},
 	{query: "C+++++---/(&", result: []interface{}{"en"}}, // hm...
 }
 
@@ -59,8 +59,13 @@ func TestSearch(t *testing.T) {
 
 	for _, tc := range searchTests {
 		res := s.Search(tc.query, false)
-		if !reflect.DeepEqual(res, tc.result) {
-			t.Errorf("Query %q resulted in wrong result. Want %v have %v", tc.query, tc.result, res)
+		for _, val := range tc.result {
+			if !res.contains(val) {
+				t.Errorf("Query %q resulted in wrong result. Want %v have %v", tc.query, val, res)
+			}
+		}
+		if len(tc.result) != len(res.data) {
+			t.Errorf("Query %q resulted in wrong number of results. Want %v have %v", tc.query, len(tc.result), len(res.data))
 		}
 	}
 }
@@ -86,8 +91,10 @@ func TestPrefixSearch(t *testing.T) {
 
 	for _, tc := range prefixSearchTests {
 		res := s.Search(tc.query, true)
-		if !reflect.DeepEqual(res, tc.result) {
-			t.Errorf("Query %q resulted in wrong result. Want %v have %v", tc.query, tc.result, res)
+		for _, val := range tc.result {
+			if !res.contains(val) {
+				t.Errorf("Query %q resulted in wrong result. Want %v have %v", tc.query, val, res)
+			}
 		}
 	}
 }

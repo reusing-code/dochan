@@ -7,11 +7,34 @@ type Search struct {
 type node struct {
 	children map[rune]*node
 	name     rune
-	result   []interface{}
+	result   *resultSet
+}
+
+type resultSet struct {
+	data map[interface{}]bool
+}
+
+func newResultSet() *resultSet {
+	return &resultSet{make(map[interface{}]bool)}
+}
+
+func (r *resultSet) add(res interface{}) {
+	r.data[res] = true
+}
+
+func (r *resultSet) addAll(other *resultSet) {
+	for k, _ := range other.data {
+		r.data[k] = true
+	}
+}
+
+func (r *resultSet) contains(item interface{}) bool {
+	_, res := r.data[item]
+	return res
 }
 
 func creatNode(r rune) *node {
-	n := &node{children: make(map[rune]*node), name: r, result: make([]interface{}, 0)}
+	n := &node{children: make(map[rune]*node), name: r, result: newResultSet()}
 	return n
 }
 
@@ -42,11 +65,11 @@ func (s *Search) addToken(token string, result interface{}) {
 		}
 		currentNode = next
 	}
-	currentNode.result = append(currentNode.result, result)
+	currentNode.result.add(result)
 }
 
-func (s *Search) Search(query string, prefix bool) []interface{} {
-	result := make([]interface{}, 0)
+func (s *Search) Search(query string, prefix bool) *resultSet {
+	result := newResultSet()
 	tokens := Tokenize(query)
 	if len(tokens) > 1 {
 		// multiple search words currently not supported
@@ -75,11 +98,10 @@ func (s *Search) Search(query string, prefix bool) []interface{} {
 	}
 }
 
-func collectResults(n *node) []interface{} {
-	result := make([]interface{}, 0)
-	result = append(result, n.result...)
+func collectResults(n *node) *resultSet {
+	result := n.result
 	for _, child := range n.children {
-		result = append(result, collectResults(child)...)
+		result.addAll(collectResults(child))
 	}
 	return result
 }
