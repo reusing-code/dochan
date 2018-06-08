@@ -16,6 +16,7 @@ var normTests = []struct {
 	{"A.b!c", []string{"a", "b", "c"}},
 	{"A A A", []string{"a", "a", "a"}},
 	{"a2B3 01337", []string{"a2b3", "01337"}},
+	{"hae hoe hue", []string{"ha", "ho", "hu"}},
 }
 
 func TestNormalization(t *testing.T) {

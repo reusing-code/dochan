@@ -42,7 +42,7 @@ var searchTests = []struct {
 	{query: "känäle", result: []interface{}{"ger"}},
 	{query: "Kanele", result: []interface{}{}},
 	{query: "Kanöle", result: []interface{}{}},
-	{query: "Kanaele", result: []interface{}{}},
+	{query: "Kanaele", result: []interface{}{"ger"}},
 	{query: "Kan äle", result: []interface{}{}},
 	{query: "2009", result: []interface{}{"en"}},
 	{query: "2010", result: []interface{}{}},
