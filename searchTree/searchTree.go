@@ -1,6 +1,6 @@
-package search
+package searchTree
 
-type Search struct {
+type SearchTree struct {
 	root *node
 }
 
@@ -38,24 +38,24 @@ func creatNode(r rune) *node {
 	return n
 }
 
-func MakeSearch() *Search {
-	return &Search{root: creatNode(0)}
+func MakeSearch() *SearchTree {
+	return &SearchTree{root: creatNode(0)}
 }
 
-func (s *Search) AddContent(content []string, result interface{}) {
+func (s *SearchTree) AddContent(content []string, result interface{}) {
 	for _, str := range content {
 		s.AddString(str, result)
 	}
 }
 
-func (s *Search) AddString(str string, result interface{}) {
+func (s *SearchTree) AddString(str string, result interface{}) {
 	tokens := Tokenize(str)
 	for _, token := range tokens {
 		s.addToken(token, result)
 	}
 }
 
-func (s *Search) addToken(token string, result interface{}) {
+func (s *SearchTree) addToken(token string, result interface{}) {
 	currentNode := s.root
 	for _, r := range token {
 		next, exists := currentNode.children[r]
@@ -68,7 +68,7 @@ func (s *Search) addToken(token string, result interface{}) {
 	currentNode.result.add(result)
 }
 
-func (s *Search) Search(query string, prefix bool) *resultSet {
+func (s *SearchTree) Search(query string, prefix bool) *resultSet {
 	result := newResultSet()
 	tokens := Tokenize(query)
 	if len(tokens) > 1 {

@@ -1,9 +1,9 @@
-package search
+package searchTree
 
 import (
 	"testing"
 
-	"github.com/reusing-code/dochan/search/wiki_testdata"
+	"github.com/reusing-code/dochan/searchTree/wiki_testdata"
 )
 
 /**
