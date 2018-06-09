@@ -33,12 +33,16 @@ func (r *resultSet) contains(item interface{}) bool {
 	return res
 }
 
+func (r *resultSet) GetRes() map[interface{}]bool {
+	return r.data
+}
+
 func creatNode(r rune) *node {
 	n := &node{children: make(map[rune]*node), name: r, result: newResultSet()}
 	return n
 }
 
-func MakeSearch() *SearchTree {
+func MakeSearchTree() *SearchTree {
 	return &SearchTree{root: creatNode(0)}
 }
 

@@ -1,13 +1,27 @@
 package pdf
 
 import (
+	"bytes"
 	"encoding/xml"
+	"io"
 	"os"
 
 	"strconv"
 
 	"github.com/kokardy/saxlike"
 )
+
+type filter struct {
+	in io.Reader
+}
+
+func (f *filter) Read(p []byte) (int, error) {
+	n, err := f.in.Read(p)
+	p = bytes.Replace(p, []byte{60, 98, 62}, []byte{}, -1)
+	p = bytes.Replace(p, []byte{60, 47, 98, 62}, []byte{}, -1)
+	n = len(p)
+	return n, err
+}
 
 func ParseFile(xmlFile string) (*Document, error) {
 	f, err := os.Open(xmlFile)

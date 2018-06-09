@@ -2,6 +2,8 @@ package parser
 
 import (
 	"path/filepath"
+	"runtime"
+	"sync"
 
 	"github.com/karrick/godirwalk"
 	"github.com/reusing-code/dochan/pdf"
@@ -31,19 +33,39 @@ func getFileNames(dir string) ([]string, error) {
 	return fileList, nil
 }
 
+func concurrentParse(input chan string, cb ParserCallback, resultMtx *sync.Mutex, wg *sync.WaitGroup) {
+	defer wg.Done()
+	for file := range input {
+		doc, err := pdf.ParsePDF(file)
+		if err != nil {
+			continue
+		}
+		resultMtx.Lock()
+		cb(file, doc.GetText())
+		resultMtx.Unlock()
+	}
+}
+
 func ParseDir(dir string, cb ParserCallback) error {
+	resultMtx := &sync.Mutex{}
 	files, err := getFileNames(dir)
 	if err != nil {
 		return err
 	}
 
-	for _, file := range files {
-		doc, err := pdf.ParsePDF(file)
-		if err != nil {
-			continue
-		}
-		cb(file, doc.GetText())
+	inputChan := make(chan string, 10)
+
+	var wg sync.WaitGroup
+	for i := 0; i < runtime.NumCPU(); i++ {
+		wg.Add(1)
+		go concurrentParse(inputChan, cb, resultMtx, &wg)
 	}
+
+	for _, file := range files {
+		inputChan <- file
+	}
+	close(inputChan)
+	wg.Wait()
 
 	return nil
 }

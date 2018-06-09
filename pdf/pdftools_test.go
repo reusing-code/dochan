@@ -2,6 +2,7 @@ package pdf
 
 import (
 	"fmt"
+	"os"
 	"strings"
 	"testing"
 )
@@ -19,6 +20,7 @@ var expectedString = []struct {
 }
 
 func TestParsePDF(t *testing.T) {
+	defer os.RemoveAll("temp")
 	doc, err := ParsePDF("testdata/Projektvorschlag.pdf")
 	if err != nil {
 		t.Fatalf("error parsing pdf: %q", err)

@@ -1,8 +1,11 @@
 package pdf
 
 import (
+	"errors"
+	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 )
 
 type Document struct {
@@ -25,23 +28,39 @@ type textBlock struct {
 
 var tempDir string = "temp/"
 
-func ParsePDF(path string) (*Document, error) {
+func ParsePDF(path string) (doc *Document, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Printf("Panic in file %v: %v\n", path, r)
+			doc = nil
+			switch x := r.(type) {
+			case string:
+				err = errors.New(x)
+			case error:
+				err = x
+			default:
+				err = errors.New("Unknown panic")
+			}
+		}
+	}()
 	os.MkdirAll(tempDir, 0777)
-	defer os.RemoveAll(tempDir)
+	base := filepath.Base(path)
+	tmpFile := filepath.Join(tempDir, base+"temp.xml")
+	defer os.Remove(tmpFile)
 
-	cmd := exec.Command("pdftohtml", "-xml", path, tempDir+"temp.xml")
+	cmd := exec.Command("pdftohtml", "-xml", path, tmpFile)
 	cmd.Stderr = os.Stderr
 
-	err := cmd.Run()
+	err = cmd.Run()
 	if err != nil {
 		return nil, err
 	}
 
-	doc, err := ParseFile(tempDir + "temp.xml")
+	doc, err = ParseFile(tmpFile)
 	if err != nil {
 		return nil, err
 	}
-	return doc, nil
+	return
 }
 
 func (d *Document) GetText() []string {

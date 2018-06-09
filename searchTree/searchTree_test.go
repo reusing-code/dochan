@@ -52,7 +52,7 @@ var searchTests = []struct {
 }
 
 func TestSearch(t *testing.T) {
-	s := MakeSearch()
+	s := MakeSearchTree()
 
 	s.AddContent(testDataEn, "en")
 	s.AddContent(testDataGer, "ger")
@@ -84,7 +84,7 @@ var prefixSearchTests = []struct {
 }
 
 func TestPrefixSearch(t *testing.T) {
-	s := MakeSearch()
+	s := MakeSearchTree()
 
 	s.AddContent(testDataEn, "en")
 	s.AddContent(testDataGer, "ger")
@@ -109,7 +109,7 @@ var benchSearchWordsDE = []string{
 }
 
 func BenchmarkWikiDataDE(b *testing.B) {
-	s := MakeSearch()
+	s := MakeSearchTree()
 	wiki_testdata.ParseDataDE(func(data string) {
 		s.AddString(data, "test")
 	})
