@@ -17,19 +17,22 @@ type filter struct {
 
 func (f *filter) Read(p []byte) (int, error) {
 	n, err := f.in.Read(p)
-	p = bytes.Replace(p, []byte{60, 98, 62}, []byte{}, -1)
-	p = bytes.Replace(p, []byte{60, 47, 98, 62}, []byte{}, -1)
-	n = len(p)
+	if n == 0 {
+		return n, err
+	}
+	p = bytes.Replace(p, []byte{60, 98, 62}, []byte{32, 32, 32}, -1)
+	p = bytes.Replace(p, []byte{60, 47, 98, 62}, []byte{32, 32, 32, 32}, -1)
 	return n, err
 }
 
 func ParseFile(xmlFile string) (*Document, error) {
 	f, err := os.Open(xmlFile)
+	filt := &filter{in: f}
 	if err != nil {
 		return nil, err
 	}
 	h := pdftohtmlHander{}
-	err = saxlike.Parse(f, &h, false)
+	err = saxlike.Parse(filt, &h, false)
 	return &h.doc, err
 }
 
