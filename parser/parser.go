@@ -33,6 +33,14 @@ func getFileNames(dir string) ([]string, error) {
 	return fileList, nil
 }
 
+func GetFileCount(dir string) (int, error) {
+	fileList, err := getFileNames(dir)
+	if err != nil {
+		return 0, err
+	}
+	return len(fileList), nil
+}
+
 func concurrentParse(input chan string, cb ParserCallback, resultMtx *sync.Mutex, wg *sync.WaitGroup) {
 	defer wg.Done()
 	for file := range input {
