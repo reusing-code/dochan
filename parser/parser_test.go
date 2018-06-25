@@ -44,7 +44,7 @@ func TestGetFilenames(t *testing.T) {
 		}
 	}
 
-	fileList, err := getFileNames(tempDir)
+	fileList, err := getFiles(tempDir, NoSkip)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -59,7 +59,7 @@ func TestGetFilenames(t *testing.T) {
 		}
 		found := false
 		for _, parsedFile := range fileList {
-			if parsedFile == filepath.Join(tempDir, tc.filePath) {
+			if parsedFile.Filename == filepath.Join(tempDir, tc.filePath) {
 				found = true
 				break
 			}
@@ -84,10 +84,10 @@ func TestParseDir(t *testing.T) {
 
 	results := make(map[string][]string)
 
-	ParseDir("testdata", func(filename string, data []string) {
-		filename = filepath.Base(filename)
+	ParseDir("testdata", func(f File, data []string) {
+		filename := filepath.Base(f.Filename)
 		results[filename] = data
-	})
+	}, func(f File) bool { return false })
 
 	for _, tc := range parseDirTestCases {
 		resultData := results[tc.filename]
@@ -101,4 +101,42 @@ func TestParseDir(t *testing.T) {
 		}
 	}
 
+}
+
+func TestSkipFiles(t *testing.T) {
+	ParseDir("testdata", func(f File, data []string) {
+		t.Errorf("No file should be parsed, but got callback for %q", f.Filename)
+	}, func(f File) bool {
+		if f.Hash != "28bac19a4147fdf7225f6c514270aa0867a2a03e" &&
+			f.Hash != "8ead9513ba1f8253a30a709b87ae4a7fb386d0d8" &&
+			f.Hash != "9f8b3703e131db0429d4497314c63becc7d4b0ec" {
+			t.Errorf("File %q has unknown file hash %q", f.Filename, f.Hash)
+		}
+		return true
+	})
+
+	cbCount := 0
+	ParseDir("testdata", func(f File, data []string) {
+		cbCount++
+		if f.Hash != "28bac19a4147fdf7225f6c514270aa0867a2a03e" &&
+			f.Hash != "8ead9513ba1f8253a30a709b87ae4a7fb386d0d8" &&
+			f.Hash != "9f8b3703e131db0429d4497314c63becc7d4b0ec" {
+			t.Errorf("File %q has unknown file hash %q", f.Filename, f.Hash)
+		}
+	}, func(f File) bool {
+		return false
+	})
+	if cbCount != 3 {
+		t.Errorf("Wrong number of callbacks received: Want %d got %d", 3, cbCount)
+	}
+}
+
+func TestFileCount(t *testing.T) {
+	count, err := GetFileCount("testdata")
+	if err != nil {
+		t.Error(err)
+	}
+	if count != 3 {
+		t.Errorf("Wrong number of files received: Want %d got %d", 3, count)
+	}
 }

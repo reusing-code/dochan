@@ -60,13 +60,13 @@ func main() {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				err := parser.ParseDir(dir, func(filename string, strings []string) {
+				err := parser.ParseDir(dir, func(f parser.File, strings []string) {
 					count++
-					result[filename] = strings
+					result[f.Filename] = strings
 					percent := int(count * 100 / totalCount)
 					c.ProgressBar().Suffix(fmt.Sprintf(" %d%% [%d/%d]", percent, count, totalCount))
 					c.ProgressBar().Progress(percent)
-				})
+				}, parser.NoSkip)
 				if err != nil {
 					c.Println(err)
 				}

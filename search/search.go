@@ -15,13 +15,13 @@ func NewDirectorySearch(dir string) (*Search, error) {
 	res := &Search{}
 	res.tree = searchTree.MakeSearchTree()
 	counter := 0
-	parser.ParseDir(dir, func(filename string, strings []string) {
-		res.tree.AddContent(strings, filename)
+	parser.ParseDir(dir, func(f parser.File, strings []string) {
+		res.tree.AddContent(strings, f.Filename)
 		counter++
 		if counter%10 == 0 {
 			fmt.Printf("Parsed %d documents\n", counter)
 		}
-	})
+	}, parser.NoSkip)
 
 	return res, nil
 }

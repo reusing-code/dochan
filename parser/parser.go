@@ -1,6 +1,10 @@
 package parser
 
 import (
+	"crypto/sha1"
+	"encoding/hex"
+	"io"
+	"os"
 	"path/filepath"
 	"runtime"
 	"sync"
@@ -9,17 +13,31 @@ import (
 	"github.com/reusing-code/dochan/pdf"
 )
 
-type ParserCallback func(filename string, strings []string)
+type ParserCallback func(f File, strings []string)
+type SkipCallback func(f File) bool
 
-func getFileNames(dir string) ([]string, error) {
+type File struct {
+	Filename string
+	Hash     string
+}
 
-	fileList := []string{}
+func NoSkip(f File) bool {
+	return false
+}
+
+func getFiles(dir string, skip SkipCallback) ([]File, error) {
+	fileList := []File{}
 	err := godirwalk.Walk(dir, &godirwalk.Options{
 		Callback: func(path string, de *godirwalk.Dirent) error {
-			if de.IsRegular() {
-				if filepath.Ext(path) == ".pdf" {
-					//path = strings.TrimPrefix(path, dir)
-					fileList = append(fileList, path)
+			if de.IsRegular() && filepath.Ext(path) == ".pdf" {
+				hash, err := hashSum(path)
+				if err != nil {
+					// TODO log error
+					return nil
+				}
+				f := File{path, hash}
+				if !skip(f) {
+					fileList = append(fileList, f)
 				}
 			}
 			return nil
@@ -34,17 +52,17 @@ func getFileNames(dir string) ([]string, error) {
 }
 
 func GetFileCount(dir string) (int, error) {
-	fileList, err := getFileNames(dir)
+	fileList, err := getFiles(dir, NoSkip)
 	if err != nil {
 		return 0, err
 	}
 	return len(fileList), nil
 }
 
-func concurrentParse(input chan string, cb ParserCallback, resultMtx *sync.Mutex, wg *sync.WaitGroup) {
+func concurrentParse(input chan File, cb ParserCallback, resultMtx *sync.Mutex, wg *sync.WaitGroup) {
 	defer wg.Done()
 	for file := range input {
-		doc, err := pdf.ParsePDF(file)
+		doc, err := pdf.ParsePDF(file.Filename)
 		if err != nil {
 			continue
 		}
@@ -54,14 +72,14 @@ func concurrentParse(input chan string, cb ParserCallback, resultMtx *sync.Mutex
 	}
 }
 
-func ParseDir(dir string, cb ParserCallback) error {
+func ParseDir(dir string, cb ParserCallback, skip SkipCallback) error {
 	resultMtx := &sync.Mutex{}
-	files, err := getFileNames(dir)
+	files, err := getFiles(dir, skip)
 	if err != nil {
 		return err
 	}
 
-	inputChan := make(chan string, 10)
+	inputChan := make(chan File, 10)
 
 	var wg sync.WaitGroup
 	for i := 0; i < runtime.NumCPU(); i++ {
@@ -76,4 +94,21 @@ func ParseDir(dir string, cb ParserCallback) error {
 	wg.Wait()
 
 	return nil
+}
+
+func hashSum(filePath string) (result string, err error) {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return
+	}
+	defer file.Close()
+
+	hash := sha1.New()
+	_, err = io.Copy(hash, file)
+	if err != nil {
+		return
+	}
+
+	result = hex.EncodeToString(hash.Sum(nil))
+	return
 }
