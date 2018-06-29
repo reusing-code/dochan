@@ -89,3 +89,42 @@ func (db *DB) SetHashTable(table map[string]bool) error {
 	}
 	return nil
 }
+
+func (db *DB) AddFiles(files map[string][]byte) error {
+	err := db.handle.Update(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket([]byte(fileBucket))
+
+		for key, val := range files {
+			err := bucket.Put([]byte(key), val)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	return nil
+
+}
+
+func (db *DB) GetAllFiles(result map[string][]byte) error {
+	err := db.handle.View(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket([]byte(fileBucket))
+		err := bucket.ForEach(func(k, v []byte) error {
+			result[string(k)] = v
+			return nil
+
+		})
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	return nil
+}
