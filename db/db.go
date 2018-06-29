@@ -109,7 +109,8 @@ func (db *DB) AddFiles(files map[string][]byte) error {
 
 }
 
-func (db *DB) GetAllFiles(result map[string][]byte) error {
+func (db *DB) GetAllFiles() (map[string][]byte, error) {
+	result := make(map[string][]byte)
 	err := db.handle.View(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket([]byte(fileBucket))
 		err := bucket.ForEach(func(k, v []byte) error {
@@ -124,7 +125,7 @@ func (db *DB) GetAllFiles(result map[string][]byte) error {
 		return nil
 	})
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return nil
+	return result, nil
 }

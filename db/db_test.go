@@ -97,8 +97,7 @@ func TestStoreFiles(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	out := make(map[string][]byte)
-	err = db.GetAllFiles(out)
+	out, err := db.GetAllFiles()
 	if err != nil {
 		t.Fatal(err)
 	}
