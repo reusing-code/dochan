@@ -1,6 +1,7 @@
 package eml
 
 import (
+	"fmt"
 	"io"
 	"os"
 
@@ -33,6 +34,7 @@ func ExtractAttachmentsFromDirRec(dir string, cb func(filename string, content [
 		Unsorted: true,
 		Callback: func(path string, de *godirwalk.Dirent) error {
 			if de.IsRegular() {
+				fmt.Println(path)
 				f, err := os.Open(path)
 				defer f.Close()
 				if err != nil {
