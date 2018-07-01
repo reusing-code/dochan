@@ -30,7 +30,7 @@ func TestExtractAttachments(t *testing.T) {
 }
 
 func TestExtractAttachmentsFromDirRec(t *testing.T) {
-	fileFound := false
+	count := 0
 	err := ExtractAttachmentsFromDirRec("testdata", func(filename string, content []byte, messageID string) error {
 		if filename != "IncredibleDocument.pdf" {
 			t.Errorf("Want filename %q, got %q", "IncredibleDocument.pdf", filename)
@@ -38,13 +38,13 @@ func TestExtractAttachmentsFromDirRec(t *testing.T) {
 		if len(content) < 10000 {
 			t.Errorf("File %q not large enough: %v B", filename, len(content))
 		}
-		fileFound = true
+		count++
 		return nil
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !fileFound {
-		t.Errorf("Expected file not extracted")
+	if count != 1 {
+		t.Errorf("Wrong number of files extracted %d", count)
 	}
 }

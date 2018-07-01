@@ -42,7 +42,8 @@ func ExtractAttachmentsFromDirRec(dir string, cb func(filename string, content [
 				}
 				err = ExtractAttachments(f, cb)
 				if err != nil {
-					return err
+					fmt.Printf("Error in file %q: %q\n", path, err)
+					return nil
 				}
 			}
 			return nil
