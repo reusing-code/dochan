@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 
 	"github.com/google/uuid"
 	"github.com/karrick/godirwalk"
@@ -33,7 +34,7 @@ func ExtractAttachmentsFromDirRec(dir string, cb func(filename string, content [
 	err := godirwalk.Walk(dir, &godirwalk.Options{
 		Unsorted: true,
 		Callback: func(path string, de *godirwalk.Dirent) error {
-			if de.IsRegular() {
+			if de.IsRegular() && filepath.Ext(path) == ".eml" {
 				fmt.Println(path)
 				f, err := os.Open(path)
 				defer f.Close()
