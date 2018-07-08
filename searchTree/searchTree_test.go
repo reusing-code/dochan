@@ -2,8 +2,6 @@ package searchTree
 
 import (
 	"testing"
-
-	"github.com/reusing-code/dochan/searchTree/wiki_testdata"
 )
 
 /**
@@ -106,19 +104,4 @@ var benchSearchWordsDE = []string{
 	"und",
 	"sandkast",
 	"bei",
-}
-
-func BenchmarkWikiDataDE(b *testing.B) {
-	s := MakeSearchTree()
-	wiki_testdata.ParseDataDE(func(data string) {
-		s.AddString(data, "test")
-	})
-
-	b.ResetTimer()
-
-	for i := 0; i < b.N; i++ {
-		for _, word := range benchSearchWordsDE {
-			s.Search(word, false)
-		}
-	}
 }

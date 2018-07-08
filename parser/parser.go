@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"sync"
 
 	"github.com/karrick/godirwalk"
@@ -25,11 +26,26 @@ func NoSkip(f File) bool {
 	return false
 }
 
+/**
+Return a function that filters out all files with extensions
+not matching the allowed ones (no dots ('.') in allowedExts!)
+*/
+func ExtensionFilter(allowedExts []string) func(f File) bool {
+	return func(f File) bool {
+		for _, ext := range allowedExts {
+			if strings.EqualFold(filepath.Ext(f.Filename), "."+ext) {
+				return false
+			}
+		}
+		return true
+	}
+}
+
 func getFiles(dir string, skip SkipCallback) ([]File, error) {
 	fileList := []File{}
 	err := godirwalk.Walk(dir, &godirwalk.Options{
 		Callback: func(path string, de *godirwalk.Dirent) error {
-			if de.IsRegular() && filepath.Ext(path) == ".pdf" {
+			if de.IsRegular() {
 				hash, err := hashSum(path)
 				if err != nil {
 					// TODO log error

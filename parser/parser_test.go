@@ -44,7 +44,7 @@ func TestGetFilenames(t *testing.T) {
 		}
 	}
 
-	fileList, err := getFiles(tempDir, NoSkip)
+	fileList, err := getFiles(tempDir, ExtensionFilter([]string{"pdf"}))
 	if err != nil {
 		t.Fatal(err)
 	}
