@@ -11,14 +11,14 @@ type node struct {
 }
 
 type resultSet struct {
-	data map[interface{}]bool
+	data map[string]bool
 }
 
 func newResultSet() *resultSet {
-	return &resultSet{make(map[interface{}]bool)}
+	return &resultSet{make(map[string]bool)}
 }
 
-func (r *resultSet) add(res interface{}) {
+func (r *resultSet) add(res string) {
 	r.data[res] = true
 }
 
@@ -28,12 +28,12 @@ func (r *resultSet) addAll(other *resultSet) {
 	}
 }
 
-func (r *resultSet) contains(item interface{}) bool {
+func (r *resultSet) contains(item string) bool {
 	_, res := r.data[item]
 	return res
 }
 
-func (r *resultSet) GetRes() map[interface{}]bool {
+func (r *resultSet) GetRes() map[string]bool {
 	return r.data
 }
 
@@ -46,20 +46,20 @@ func MakeSearchTree() *SearchTree {
 	return &SearchTree{root: creatNode(0)}
 }
 
-func (s *SearchTree) AddContent(content []string, result interface{}) {
+func (s *SearchTree) AddContent(content []string, result string) {
 	for _, str := range content {
 		s.AddString(str, result)
 	}
 }
 
-func (s *SearchTree) AddString(str string, result interface{}) {
+func (s *SearchTree) AddString(str string, result string) {
 	tokens := Tokenize(str)
 	for _, token := range tokens {
 		s.addToken(token, result)
 	}
 }
 
-func (s *SearchTree) addToken(token string, result interface{}) {
+func (s *SearchTree) addToken(token string, result string) {
 	currentNode := s.root
 	for _, r := range token {
 		next, exists := currentNode.children[r]

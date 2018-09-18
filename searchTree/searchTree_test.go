@@ -27,26 +27,26 @@ var testDataGer = []string{
 
 var searchTests = []struct {
 	query  string
-	result []interface{}
+	result []string
 }{
-	{query: "language", result: []interface{}{"en"}},
-	{query: "Griesemer", result: []interface{}{"en", "ger"}},
-	{query: "griesemer", result: []interface{}{"en", "ger"}},
-	{query: "Gries", result: []interface{}{}},
-	{query: "Griesa", result: []interface{}{}},
-	{query: "riesemer", result: []interface{}{}},
-	{query: "Kanäle", result: []interface{}{"ger"}},
-	{query: "kanale", result: []interface{}{"ger"}},
-	{query: "känäle", result: []interface{}{"ger"}},
-	{query: "Kanele", result: []interface{}{}},
-	{query: "Kanöle", result: []interface{}{}},
-	{query: "Kanaele", result: []interface{}{"ger"}},
-	{query: "Kan äle", result: []interface{}{}},
-	{query: "2009", result: []interface{}{"en"}},
-	{query: "2010", result: []interface{}{}},
-	{query: "C++", result: []interface{}{"en"}},
-	{query: "", result: []interface{}{}},
-	{query: "C+++++---/(&", result: []interface{}{"en"}}, // hm...
+	{query: "language", result: []string{"en"}},
+	{query: "Griesemer", result: []string{"en", "ger"}},
+	{query: "griesemer", result: []string{"en", "ger"}},
+	{query: "Gries", result: []string{}},
+	{query: "Griesa", result: []string{}},
+	{query: "riesemer", result: []string{}},
+	{query: "Kanäle", result: []string{"ger"}},
+	{query: "kanale", result: []string{"ger"}},
+	{query: "känäle", result: []string{"ger"}},
+	{query: "Kanele", result: []string{}},
+	{query: "Kanöle", result: []string{}},
+	{query: "Kanaele", result: []string{"ger"}},
+	{query: "Kan äle", result: []string{}},
+	{query: "2009", result: []string{"en"}},
+	{query: "2010", result: []string{}},
+	{query: "C++", result: []string{"en"}},
+	{query: "", result: []string{}},
+	{query: "C+++++---/(&", result: []string{"en"}}, // hm...
 }
 
 func TestSearch(t *testing.T) {
@@ -70,15 +70,15 @@ func TestSearch(t *testing.T) {
 
 var prefixSearchTests = []struct {
 	query  string
-	result []interface{}
+	result []string
 }{
-	{query: "Griesemer", result: []interface{}{"en", "ger"}},
-	{query: "griesemer", result: []interface{}{"en", "ger"}},
-	{query: "Gries", result: []interface{}{"en", "ger"}},
-	{query: "Griese", result: []interface{}{"en", "ger"}},
-	{query: "g", result: []interface{}{"en", "ger"}},
-	{query: "", result: []interface{}{"en", "ger"}},
-	{query: "Griesea", result: []interface{}{}},
+	{query: "Griesemer", result: []string{"en", "ger"}},
+	{query: "griesemer", result: []string{"en", "ger"}},
+	{query: "Gries", result: []string{"en", "ger"}},
+	{query: "Griese", result: []string{"en", "ger"}},
+	{query: "g", result: []string{"en", "ger"}},
+	{query: "", result: []string{"en", "ger"}},
+	{query: "Griesea", result: []string{}},
 }
 
 func TestPrefixSearch(t *testing.T) {
