@@ -37,6 +37,17 @@ func (r *resultSet) GetRes() map[string]bool {
 	return r.data
 }
 
+func (r *resultSet) GetResSlice() []string {
+	slice := make([]string, len(r.data))
+
+	i := 0
+	for k := range r.data {
+		slice[i] = k
+		i++
+	}
+	return slice
+}
+
 func creatNode(r rune) *node {
 	n := &node{children: make(map[rune]*node), name: r, result: newResultSet()}
 	return n
