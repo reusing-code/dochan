@@ -86,7 +86,6 @@ func (s *server) searchHandler(w http.ResponseWriter, r *http.Request) {
 	elapsed := time.Since(start)
 
 	result := SearchResult{Count: len(res.GetRes()), Time: elapsed.String(), Res: res.GetResSlice()}
-	log.Print(result)
 	js, err := json.Marshal(result)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
