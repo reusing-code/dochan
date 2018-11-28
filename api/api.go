@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bytes"
+	"encoding/gob"
 	"encoding/json"
 	"flag"
 	"log"
@@ -22,9 +24,15 @@ type server struct {
 }
 
 type SearchResult struct {
-	Count int
-	Time  string
-	Res   []string
+	Count int        `json:"count"`
+	Time  string     `json:"time"`
+	Res   []Document `json:"results"`
+}
+
+type Document struct {
+	ID       int    `json:"id"`
+	Filename string `json:"filename"`
+	Content  string `json:"content"`
 }
 
 func main() {
@@ -49,7 +57,19 @@ func (s *server) init() error {
 	fileCount := 0
 	err := parser.ParseDir(s.dir, func(f parser.File, strings []string) {
 		fileCount++
-		s.search.AddContent(strings, f.Filename)
+		cont := ""
+		if len(strings) > 0 {
+			cont = strings[0]
+		}
+		doc := Document{ID: fileCount, Filename: f.Filename, Content: cont}
+		var buf bytes.Buffer
+		enc := gob.NewEncoder(&buf)
+		err := enc.Encode(doc)
+		if err != nil {
+			log.Printf("Error encoding file %v", f.Filename)
+			return
+		}
+		s.search.AddContent(strings, buf.String())
 	}, parser.ExtensionFilter([]string{"pdf"}))
 	if err != nil {
 		return err
@@ -61,7 +81,7 @@ func (s *server) init() error {
 func (s *server) start() error {
 	router := mux.NewRouter()
 
-	router.HandleFunc("/search", s.searchHandler)
+	router.HandleFunc("/api/documents", s.searchHandler)
 
 	http.Handle("/", router)
 
@@ -70,13 +90,15 @@ func (s *server) start() error {
 }
 
 func (s *server) searchHandler(w http.ResponseWriter, r *http.Request) {
-	keys, ok := r.URL.Query()["query"]
+	keys, ok := r.URL.Query()["q"]
 
 	if !ok || len(keys[0]) < 1 {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte("Missing search query"))
 		return
 	}
+
+	w.Header().Add("Access-Control-Allow-Origin", "*")
 
 	searchKey := keys[0]
 
@@ -85,7 +107,20 @@ func (s *server) searchHandler(w http.ResponseWriter, r *http.Request) {
 	res := s.search.Search(searchKey, true)
 	elapsed := time.Since(start)
 
-	result := SearchResult{Count: len(res.GetRes()), Time: elapsed.String(), Res: res.GetResSlice()}
+	var docs []Document
+	for _, str := range res.GetResSlice() {
+		buf := bytes.NewBufferString(str)
+		var doc Document
+		dec := gob.NewDecoder(buf)
+		err := dec.Decode(&doc)
+		if err != nil {
+			log.Printf("Error decoding value")
+			continue
+		}
+		docs = append(docs, doc)
+	}
+
+	result := SearchResult{Count: len(res.GetRes()), Time: elapsed.String(), Res: docs}
 	js, err := json.Marshal(result)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
