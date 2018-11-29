@@ -4,6 +4,7 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"io"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -14,7 +15,7 @@ import (
 	"github.com/reusing-code/dochan/pdf"
 )
 
-type ParserCallback func(f File, strings []string)
+type ParserCallback func(f File, strings []string, rawData []byte)
 type SkipCallback func(f File) bool
 
 type File struct {
@@ -82,8 +83,12 @@ func concurrentParse(input chan File, cb ParserCallback, resultMtx *sync.Mutex, 
 		if err != nil {
 			continue
 		}
+		b, err := ioutil.ReadFile(file.Filename)
+		if err != nil {
+			continue
+		}
 		resultMtx.Lock()
-		cb(file, doc.GetText())
+		cb(file, doc.GetText(), b)
 		resultMtx.Unlock()
 	}
 }

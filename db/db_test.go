@@ -32,7 +32,7 @@ func TestSetGetHashTable(t *testing.T) {
 	}
 	defer db.Close()
 
-	table, err := db.GetHashTable()
+	table, err := db.loadHashTable()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -44,12 +44,13 @@ func TestSetGetHashTable(t *testing.T) {
 	table["test"] = true
 	table["bla"] = true
 
-	err = db.SetHashTable(table)
+	db.hashTable = table
+	err = db.storeHashTable()
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	table, err = db.GetHashTable()
+	table, err = db.loadHashTable()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -93,7 +94,7 @@ func TestStoreFiles(t *testing.T) {
 		}
 	}
 
-	err = db.AddFiles(in)
+	err = db.addFiles(in)
 	if err != nil {
 		t.Fatal(err)
 	}
