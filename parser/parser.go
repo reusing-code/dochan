@@ -31,11 +31,11 @@ func NoSkip(f File) bool {
 Return a function that filters out all files with extensions
 not matching the allowed ones (no dots ('.') in allowedExts!)
 */
-func ExtensionFilter(allowedExts []string) func(f File) bool {
+func ExtensionFilter(allowedExts []string, chainedFilter SkipCallback) func(f File) bool {
 	return func(f File) bool {
 		for _, ext := range allowedExts {
 			if strings.EqualFold(filepath.Ext(f.Filename), "."+ext) {
-				return false
+				return chainedFilter(f)
 			}
 		}
 		return true

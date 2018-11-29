@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/reusing-code/dochan/db"
 	"github.com/reusing-code/dochan/parser"
 
 	"github.com/reusing-code/dochan/searchTree"
@@ -21,6 +22,7 @@ type server struct {
 	port   int
 	dir    string
 	search *searchTree.SearchTree
+	db     *db.DB
 }
 
 type SearchResult struct {
@@ -37,11 +39,20 @@ type Document struct {
 
 func main() {
 	serv := &server{}
+	var dbPath string
 	flag.IntVar(&serv.port, "port", 8092, "Listening port")
 	flag.StringVar(&serv.dir, "path", "", "Document storage path")
+	flag.StringVar(&dbPath, "dbFile", "dochan.db", "DB File storage")
 	flag.Parse()
 
-	err := serv.init()
+	var err error
+	serv.db, err = db.New(dbPath)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = serv.init()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -55,7 +66,8 @@ func main() {
 func (s *server) init() error {
 	s.search = searchTree.MakeSearchTree()
 	fileCount := 0
-	err := parser.ParseDir(s.dir, func(f parser.File, strings []string) {
+	err := parser.ParseDir(s.dir, func(f parser.File, strings []string, rawData []byte) {
+		s.db.AddFile(f.Filename, f.Hash, rawData, strings)
 		fileCount++
 		cont := ""
 		if len(strings) > 0 {
@@ -70,7 +82,9 @@ func (s *server) init() error {
 			return
 		}
 		s.search.AddContent(strings, buf.String())
-	}, parser.ExtensionFilter([]string{"pdf"}))
+	}, parser.ExtensionFilter([]string{"pdf"}, func(f parser.File) bool {
+		return s.db.Contains(f.Hash)
+	}))
 	if err != nil {
 		return err
 	}

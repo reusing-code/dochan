@@ -156,12 +156,18 @@ func (db *DB) addFiles(files map[string][]byte) error {
 
 }
 
-func (db *DB) GetAllFiles() (map[string][]byte, error) {
-	result := make(map[string][]byte)
+func (db *DB) GetAllFiles(cb func(key uint64, file DBFile)) error {
 	err := db.handle.View(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket([]byte(fileBucket))
 		err := bucket.ForEach(func(k, v []byte) error {
-			result[string(k)] = v
+			buf := bytes.NewBuffer(v)
+			dec := gob.NewDecoder(buf)
+			var f DBFile
+			err := dec.Decode(&f)
+			if err != nil {
+				return err
+			}
+			cb(btoi(k), f)
 			return nil
 
 		})
@@ -172,13 +178,17 @@ func (db *DB) GetAllFiles() (map[string][]byte, error) {
 		return nil
 	})
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return result, nil
+	return nil
 }
 
 func itob(v uint64) []byte {
 	b := make([]byte, 8)
 	binary.BigEndian.PutUint64(b, v)
 	return b
+}
+
+func btoi(b []byte) uint64 {
+	return binary.BigEndian.Uint64(b)
 }
