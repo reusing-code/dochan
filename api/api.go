@@ -32,9 +32,15 @@ type SearchResult struct {
 }
 
 type Document struct {
-	ID       int    `json:"id"`
+	ID       uint64 `json:"id"`
 	Filename string `json:"filename"`
 	Content  string `json:"content"`
+}
+
+type ResponseDocument struct {
+	ID         uint64 `json:"id"`
+	Filename   string `json:"filename"`
+	RawContent []byte `json:"content"`
 }
 
 func main() {
@@ -83,7 +89,7 @@ func (s *server) init() error {
 		if len(file.Content) > 0 {
 			cont = file.Content[0]
 		}
-		doc := Document{ID: int(key), Filename: file.Name, Content: cont}
+		doc := Document{ID: key, Filename: file.Name, Content: cont}
 		var buf bytes.Buffer
 		enc := gob.NewEncoder(&buf)
 		err := enc.Encode(doc)
@@ -103,6 +109,7 @@ func (s *server) start() error {
 	router := mux.NewRouter()
 
 	router.HandleFunc("/api/documents", s.searchHandler)
+	router.HandleFunc("/api/documents/{key:[0-9]+}", s.documentHandler)
 
 	http.Handle("/", router)
 
@@ -150,4 +157,27 @@ func (s *server) searchHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(js)
 
+}
+
+func (s *server) documentHandler(w http.ResponseWriter, r *http.Request) {
+	keyStr := mux.Vars(r)["key"]
+	i, err := strconv.ParseInt(keyStr, 10, 64)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	key := uint64(i)
+	f, err := s.db.GetFile(key)
+	if err != nil {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+	doc := &ResponseDocument{ID: key, Filename: f.Name, RawContent: f.RawData}
+	js, err := json.Marshal(doc)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(js)
 }

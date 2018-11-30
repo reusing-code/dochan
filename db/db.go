@@ -183,6 +183,30 @@ func (db *DB) GetAllFiles(cb func(key uint64, file DBFile)) error {
 	return nil
 }
 
+func (db *DB) GetFile(key uint64) (*DBFile, error) {
+	f := &DBFile{}
+	err := db.handle.View(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket([]byte(fileBucket))
+		b := bucket.Get(itob(key))
+		if b == nil {
+			return fmt.Errorf("Document with key %v not found", key)
+		}
+		buf := bytes.NewBuffer(b)
+		dec := gob.NewDecoder(buf)
+
+		err := dec.Decode(f)
+		if err != nil {
+			return err
+		}
+		return nil
+
+	})
+	if err != nil {
+		return nil, err
+	}
+	return f, nil
+}
+
 func itob(v uint64) []byte {
 	b := make([]byte, 8)
 	binary.BigEndian.PutUint64(b, v)
