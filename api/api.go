@@ -69,26 +69,33 @@ func (s *server) init() error {
 	err := parser.ParseDir(s.dir, func(f parser.File, strings []string, rawData []byte) {
 		s.db.AddFile(f.Filename, f.Hash, rawData, strings)
 		fileCount++
-		cont := ""
-		if len(strings) > 0 {
-			cont = strings[0]
-		}
-		doc := Document{ID: fileCount, Filename: f.Filename, Content: cont}
-		var buf bytes.Buffer
-		enc := gob.NewEncoder(&buf)
-		err := enc.Encode(doc)
-		if err != nil {
-			log.Printf("Error encoding file %v", f.Filename)
-			return
-		}
-		s.search.AddContent(strings, buf.String())
+
 	}, parser.ExtensionFilter([]string{"pdf"}, func(f parser.File) bool {
 		return s.db.Contains(f.Hash)
 	}))
 	if err != nil {
 		return err
 	}
-	log.Printf("Parsed %v files", fileCount)
+	log.Printf("Added %v new files", fileCount)
+
+	err = s.db.GetAllFiles(func(key uint64, file db.DBFile) {
+		cont := ""
+		if len(file.Content) > 0 {
+			cont = file.Content[0]
+		}
+		doc := Document{ID: int(key), Filename: file.Name, Content: cont}
+		var buf bytes.Buffer
+		enc := gob.NewEncoder(&buf)
+		err := enc.Encode(doc)
+		if err != nil {
+			log.Printf("Error encoding file %v", file.Path)
+			return
+		}
+		s.search.AddContent(file.Content, buf.String())
+	})
+	if err != nil {
+		return err
+	}
 	return err
 }
 
