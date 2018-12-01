@@ -110,6 +110,7 @@ func (s *server) start() error {
 
 	router.HandleFunc("/api/documents", s.searchHandler)
 	router.HandleFunc("/api/documents/{key:[0-9]+}", s.documentHandler)
+	router.HandleFunc("/api/documents/{key:[0-9]+}/download", s.downloadHandler)
 
 	http.Handle("/", router)
 
@@ -160,6 +161,7 @@ func (s *server) searchHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *server) documentHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Add("Access-Control-Allow-Origin", "*")
 	keyStr := mux.Vars(r)["key"]
 	i, err := strconv.ParseInt(keyStr, 10, 64)
 	if err != nil {
@@ -180,4 +182,23 @@ func (s *server) documentHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(js)
+}
+
+func (s *server) downloadHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Add("Access-Control-Allow-Origin", "*")
+	keyStr := mux.Vars(r)["key"]
+	i, err := strconv.ParseInt(keyStr, 10, 64)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	key := uint64(i)
+	f, err := s.db.GetFile(key)
+	if err != nil {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/pdf")
+	w.Write(f.RawData)
 }
