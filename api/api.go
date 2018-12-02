@@ -7,6 +7,7 @@ import (
 	"flag"
 	"log"
 	"net/http"
+	"path/filepath"
 	"strconv"
 	"time"
 
@@ -19,10 +20,11 @@ import (
 )
 
 type server struct {
-	port   int
-	dir    string
-	search *searchTree.SearchTree
-	db     *db.DB
+	port      int
+	dir       string
+	search    *searchTree.SearchTree
+	db        *db.DB
+	assetPath string
 }
 
 type SearchResult struct {
@@ -49,6 +51,7 @@ func main() {
 	flag.IntVar(&serv.port, "port", 8092, "Listening port")
 	flag.StringVar(&serv.dir, "path", "", "Document storage path")
 	flag.StringVar(&dbPath, "dbFile", "dochan.db", "DB File storage")
+	flag.StringVar(&serv.assetPath, "assetPath", "assets/", "Static assets to serve")
 	flag.Parse()
 
 	var err error
@@ -108,14 +111,23 @@ func (s *server) init() error {
 func (s *server) start() error {
 	router := mux.NewRouter()
 
+	clientSideRoutes := []string{"/about", "/document", "/search"}
 	router.HandleFunc("/api/documents", s.searchHandler)
 	router.HandleFunc("/api/documents/{key:[0-9]+}", s.documentHandler)
 	router.HandleFunc("/api/documents/{key:[0-9]+}/download", s.downloadHandler)
+	for _, route := range clientSideRoutes {
+		router.PathPrefix(route).HandlerFunc(s.indexHandler)
+	}
+	router.PathPrefix("/").Handler(http.FileServer(http.Dir(s.assetPath)))
 
 	http.Handle("/", router)
 
 	log.Print((http.ListenAndServe(":"+strconv.Itoa(s.port), nil)))
 	return nil
+}
+
+func (s *server) indexHandler(w http.ResponseWriter, r *http.Request) {
+	http.ServeFile(w, r, filepath.Join(s.assetPath, "index.html"))
 }
 
 func (s *server) searchHandler(w http.ResponseWriter, r *http.Request) {
