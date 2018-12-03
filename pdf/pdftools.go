@@ -46,7 +46,7 @@ func ParsePDF(path string) (doc *Document, err error) {
 	os.MkdirAll(tempDir, 0777)
 	base := filepath.Base(path)
 	tmpFile := filepath.Join(tempDir, base+"temp.xml")
-	defer os.Remove(tmpFile)
+	defer cleanupTempFiles(filepath.Join(tempDir, base))
 
 	cmd := exec.Command("pdftohtml", "-xml", path, tmpFile)
 	cmd.Stderr = os.Stderr
@@ -71,4 +71,13 @@ func (d *Document) GetText() []string {
 		}
 	}
 	return result
+}
+
+func cleanupTempFiles(prefix string) {
+	matches, _ := filepath.Glob(prefix + "*")
+	if matches != nil {
+		for _, match := range matches {
+			os.Remove(match)
+		}
+	}
 }
