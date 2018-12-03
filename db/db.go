@@ -12,7 +12,7 @@ import (
 )
 
 type DB struct {
-	handle    *bolt.DB
+	Handle    *bolt.DB
 	hashTable map[string]bool
 }
 
@@ -32,11 +32,11 @@ const (
 func New(path string) (*DB, error) {
 	result := &DB{}
 	var err error
-	result.handle, err = bolt.Open(path, 0644, nil)
+	result.Handle, err = bolt.Open(path, 0644, nil)
 	if err != nil {
 		return nil, err
 	}
-	err = result.handle.Update(func(tx *bolt.Tx) error {
+	err = result.Handle.Update(func(tx *bolt.Tx) error {
 		_, err := tx.CreateBucketIfNotExists([]byte(hashBucket))
 		if err != nil {
 			return fmt.Errorf("create bucket %q: %q", hashBucket, err)
@@ -55,8 +55,8 @@ func New(path string) (*DB, error) {
 }
 
 func (db *DB) Close() error {
-	if db != nil && db.handle != nil {
-		return db.handle.Close()
+	if db != nil && db.Handle != nil {
+		return db.Handle.Close()
 	}
 	return errors.New("No DB")
 }
@@ -64,7 +64,7 @@ func (db *DB) Close() error {
 func (db *DB) loadHashTable() (map[string]bool, error) {
 	result := make(map[string]bool)
 	var b []byte
-	err := db.handle.View(func(tx *bolt.Tx) error {
+	err := db.Handle.View(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket([]byte(hashBucket))
 		b = bucket.Get([]byte(hashKey))
 		return nil
@@ -90,7 +90,7 @@ func (db *DB) storeHashTable() error {
 	if err != nil {
 		return err
 	}
-	err = db.handle.Update(func(tx *bolt.Tx) error {
+	err = db.Handle.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket([]byte(hashBucket))
 		err := bucket.Put([]byte(hashKey), buf.Bytes())
 		return err
@@ -107,13 +107,13 @@ func (db *DB) Contains(hash string) bool {
 }
 
 func (db *DB) AddFile(path string, hash string, rawData []byte, content []string) error {
-	err := db.handle.Update(func(tx *bolt.Tx) error {
+	err := db.Handle.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket([]byte(fileBucket))
 
 		keyInt, _ := bucket.NextSequence()
 
 		filename := filepath.Base(path)
-		key := itob(keyInt)
+		key := Itob(keyInt)
 		f := &DBFile{Name: filename, Path: path, RawData: rawData, Content: content}
 
 		buf := &bytes.Buffer{}
@@ -138,7 +138,7 @@ func (db *DB) AddFile(path string, hash string, rawData []byte, content []string
 }
 
 func (db *DB) addFiles(files map[string][]byte) error {
-	err := db.handle.Update(func(tx *bolt.Tx) error {
+	err := db.Handle.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket([]byte(fileBucket))
 
 		for key, val := range files {
@@ -157,7 +157,7 @@ func (db *DB) addFiles(files map[string][]byte) error {
 }
 
 func (db *DB) GetAllFiles(cb func(key uint64, file DBFile)) error {
-	err := db.handle.View(func(tx *bolt.Tx) error {
+	err := db.Handle.View(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket([]byte(fileBucket))
 		err := bucket.ForEach(func(k, v []byte) error {
 			buf := bytes.NewBuffer(v)
@@ -167,7 +167,7 @@ func (db *DB) GetAllFiles(cb func(key uint64, file DBFile)) error {
 			if err != nil {
 				return err
 			}
-			cb(btoi(k), f)
+			cb(Btoi(k), f)
 			return nil
 
 		})
@@ -185,9 +185,9 @@ func (db *DB) GetAllFiles(cb func(key uint64, file DBFile)) error {
 
 func (db *DB) GetFile(key uint64) (*DBFile, error) {
 	f := &DBFile{}
-	err := db.handle.View(func(tx *bolt.Tx) error {
+	err := db.Handle.View(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket([]byte(fileBucket))
-		b := bucket.Get(itob(key))
+		b := bucket.Get(Itob(key))
 		if b == nil {
 			return fmt.Errorf("Document with key %v not found", key)
 		}
@@ -207,12 +207,12 @@ func (db *DB) GetFile(key uint64) (*DBFile, error) {
 	return f, nil
 }
 
-func itob(v uint64) []byte {
+func Itob(v uint64) []byte {
 	b := make([]byte, 8)
 	binary.BigEndian.PutUint64(b, v)
 	return b
 }
 
-func btoi(b []byte) uint64 {
+func Btoi(b []byte) uint64 {
 	return binary.BigEndian.Uint64(b)
 }
