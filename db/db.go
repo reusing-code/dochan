@@ -45,6 +45,10 @@ func New(path string) (*DB, error) {
 		if err != nil {
 			return fmt.Errorf("create bucket %q: %q", fileBucket, err)
 		}
+		_, err = tx.CreateBucketIfNotExists([]byte("fuel"))
+		if err != nil {
+			return fmt.Errorf("create bucket %q: %q", "fuel", err)
+		}
 		return nil
 	})
 	if err != nil {

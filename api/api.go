@@ -5,11 +5,14 @@ import (
 	"encoding/gob"
 	"encoding/json"
 	"flag"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"path/filepath"
 	"strconv"
 	"time"
+
+	"github.com/reusing-code/dochan/refuel"
 
 	"github.com/reusing-code/dochan/db"
 	"github.com/reusing-code/dochan/parser"
@@ -111,10 +114,14 @@ func (s *server) init() error {
 func (s *server) start() error {
 	router := mux.NewRouter()
 
-	clientSideRoutes := []string{"/about", "/document", "/search"}
+	clientSideRoutes := []string{"/about", "/document", "/search", "/fuel"}
 	router.HandleFunc("/api/documents", s.searchHandler)
 	router.HandleFunc("/api/documents/{key:[0-9]+}", s.documentHandler)
 	router.HandleFunc("/api/documents/{key:[0-9]+}/download", s.downloadHandler)
+	router.HandleFunc("/api/fuel", s.fuelHandler)
+	router.HandleFunc("/api/fuel/submit", s.fuelSubmitHandler)
+	router.HandleFunc("/api/fuel/csv", s.fuelCSVHandler)
+
 	for _, route := range clientSideRoutes {
 		router.PathPrefix(route).HandlerFunc(s.indexHandler)
 	}
@@ -213,4 +220,55 @@ func (s *server) downloadHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/pdf")
 	w.Write(f.RawData)
+}
+
+func (s *server) fuelHandler(w http.ResponseWriter, r *http.Request) {
+	records := make(map[uint64]refuel.RefuelRecord)
+	err := refuel.GetAllFuelRecords(s.db, func(key uint64, record *refuel.RefuelRecord) {
+		records[key] = *record
+	})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+
+	js, err := json.Marshal(records)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(js)
+}
+
+func (s *server) fuelSubmitHandler(w http.ResponseWriter, r *http.Request) {
+	var record refuel.RefuelRecord
+	buf, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	err = json.Unmarshal(buf, &record)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	err = refuel.AddFuelRecord(s.db, &record)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+}
+
+func (s *server) fuelCSVHandler(w http.ResponseWriter, r *http.Request) {
+	b, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	err = refuel.ParseCSV(s.db, b)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 }
