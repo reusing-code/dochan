@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/xml"
 	"io"
+	"io/ioutil"
 	"os"
 
 	"strconv"
@@ -15,24 +16,26 @@ type filter struct {
 	in io.Reader
 }
 
-func (f *filter) Read(p []byte) (int, error) {
-	n, err := f.in.Read(p)
-	if n == 0 {
-		return n, err
-	}
-	p = bytes.Replace(p, []byte{60, 98, 62}, []byte{32, 32, 32}, -1)
-	p = bytes.Replace(p, []byte{60, 47, 98, 62}, []byte{32, 32, 32, 32}, -1)
-	return n, err
+func filterBoldTags(p []byte) []byte {
+	ret := bytes.Replace(p, []byte{60, 98, 62}, []byte{}, -1)
+	ret = bytes.Replace(ret, []byte{60, 47, 98, 62}, []byte{}, -1)
+	return ret
 }
 
 func ParseFile(xmlFile string) (*Document, error) {
 	f, err := os.Open(xmlFile)
-	filt := &filter{in: f}
 	if err != nil {
 		return nil, err
 	}
+	content, err := ioutil.ReadAll(f)
+	if err != nil {
+		return nil, err
+	}
+	content = filterBoldTags(content)
+	buf := bytes.NewBuffer(content)
+
 	h := pdftohtmlHander{}
-	err = saxlike.Parse(filt, &h, false)
+	err = saxlike.Parse(buf, &h, false)
 	return &h.doc, err
 }
 

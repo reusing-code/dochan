@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
+	"time"
 
 	bolt "github.com/coreos/bbolt"
 )
@@ -17,10 +18,11 @@ type DB struct {
 }
 
 type DBFile struct {
-	Name    string
-	Path    string
-	RawData []byte
-	Content []string
+	Name       string
+	Path       string
+	ImportDate time.Time
+	RawData    []byte
+	Content    []string
 }
 
 const (
@@ -118,7 +120,7 @@ func (db *DB) AddFile(path string, hash string, rawData []byte, content []string
 
 		filename := filepath.Base(path)
 		key := Itob(keyInt)
-		f := &DBFile{Name: filename, Path: path, RawData: rawData, Content: content}
+		f := &DBFile{Name: filename, Path: path, RawData: rawData, Content: content, ImportDate: time.Now()}
 
 		buf := &bytes.Buffer{}
 		enc := gob.NewEncoder(buf)
@@ -139,25 +141,6 @@ func (db *DB) AddFile(path string, hash string, rawData []byte, content []string
 	db.hashTable[hash] = true
 	db.storeHashTable()
 	return nil
-}
-
-func (db *DB) addFiles(files map[string][]byte) error {
-	err := db.Handle.Update(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket([]byte(fileBucket))
-
-		for key, val := range files {
-			err := bucket.Put([]byte(key), val)
-			if err != nil {
-				return err
-			}
-		}
-		return nil
-	})
-	if err != nil {
-		return err
-	}
-	return nil
-
 }
 
 func (db *DB) GetAllFiles(cb func(key uint64, file DBFile)) error {
