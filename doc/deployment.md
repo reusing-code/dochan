@@ -143,3 +143,6 @@ feel free to use any other directory
   Cmnd_Alias DOCHAN_CMNDS = /bin/systemctl start dochan, /bin/systemctl stop dochan, /bin/systemctl restart dochan
   %jenkins ALL=(ALL) NOPASSWD: DOCHAN_CMNDS
   ```
+  ```bash
+  sudo systemctl daemon-reload
+  ```
