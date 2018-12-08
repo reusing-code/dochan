@@ -48,6 +48,11 @@ type ResponseDocument struct {
 	RawContent []byte `json:"content"`
 }
 
+type FuelRecord struct {
+	refuel.RefuelRecord
+	ID uint64 `json:"id"`
+}
+
 func main() {
 	serv := &server{}
 	var dbPath string
@@ -223,9 +228,10 @@ func (s *server) downloadHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *server) fuelHandler(w http.ResponseWriter, r *http.Request) {
-	records := make(map[uint64]refuel.RefuelRecord)
+	records := make([]FuelRecord, 0)
 	err := refuel.GetAllFuelRecords(s.db, func(key uint64, record *refuel.RefuelRecord) {
-		records[key] = *record
+		newRecord := FuelRecord{*record, key}
+		records = append(records, newRecord)
 	})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
