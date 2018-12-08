@@ -44,7 +44,7 @@ func TestGetFilenames(t *testing.T) {
 		}
 	}
 
-	fileList, err := getFiles(tempDir, ExtensionFilter([]string{"pdf"}))
+	fileList, err := getFiles(tempDir, ExtensionFilter([]string{"pdf"}, NoSkip))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -84,7 +84,7 @@ func TestParseDir(t *testing.T) {
 
 	results := make(map[string][]string)
 
-	ParseDir("testdata", func(f File, data []string) {
+	ParseDir("testdata", func(f File, data []string, rawData []byte) {
 		filename := filepath.Base(f.Filename)
 		results[filename] = data
 	}, func(f File) bool { return false })
@@ -104,7 +104,7 @@ func TestParseDir(t *testing.T) {
 }
 
 func TestSkipFiles(t *testing.T) {
-	ParseDir("testdata", func(f File, data []string) {
+	ParseDir("testdata", func(f File, data []string, rawData []byte) {
 		t.Errorf("No file should be parsed, but got callback for %q", f.Filename)
 	}, func(f File) bool {
 		if f.Hash != "28bac19a4147fdf7225f6c514270aa0867a2a03e" &&
@@ -116,7 +116,7 @@ func TestSkipFiles(t *testing.T) {
 	})
 
 	cbCount := 0
-	ParseDir("testdata", func(f File, data []string) {
+	ParseDir("testdata", func(f File, data []string, rawData []byte) {
 		cbCount++
 		if f.Hash != "28bac19a4147fdf7225f6c514270aa0867a2a03e" &&
 			f.Hash != "8ead9513ba1f8253a30a709b87ae4a7fb386d0d8" &&
