@@ -1,7 +1,6 @@
 package db
 
 import (
-	"encoding/json"
 	"os"
 	"testing"
 )
@@ -60,57 +59,5 @@ func TestSetGetHashTable(t *testing.T) {
 	_, ok := table["bla"]
 	if !ok {
 		t.Error("Table entry not present")
-	}
-}
-
-type fileStruct struct {
-	Name string
-	Bla  string
-}
-
-var testFiles = []struct {
-	key  string
-	file fileStruct
-}{
-	{"key1", fileStruct{"abc", "def"}},
-	{"key2", fileStruct{"123", "123"}},
-	{"key3", fileStruct{"F", "X"}},
-}
-
-func TestStoreFiles(t *testing.T) {
-	defer os.Remove("test.db")
-	db, err := New("test.db")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer db.Close()
-
-	in := make(map[string][]byte)
-	for _, tc := range testFiles {
-		b, err := json.Marshal(tc.file)
-		in[tc.key] = b
-		if err != nil {
-			t.Fatal(err)
-		}
-	}
-
-	err = db.addFiles(in)
-	if err != nil {
-		t.Fatal(err)
-	}
-	out, err := db.GetAllFiles()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	for _, tc := range testFiles {
-		var file fileStruct
-		err := json.Unmarshal(out[tc.key], &file)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if file != tc.file {
-			t.Errorf("Value for key %q expected %q was %q", tc.key, tc.file, file)
-		}
 	}
 }
