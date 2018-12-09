@@ -9,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"time"
 
@@ -50,7 +51,8 @@ type ResponseDocument struct {
 
 type FuelRecord struct {
 	refuel.RefuelRecord
-	ID uint64 `json:"id"`
+	DrivenKM int    `json:"drivenKM"`
+	ID       uint64 `json:"id"`
 }
 
 func main() {
@@ -230,11 +232,18 @@ func (s *server) downloadHandler(w http.ResponseWriter, r *http.Request) {
 func (s *server) fuelHandler(w http.ResponseWriter, r *http.Request) {
 	records := make([]FuelRecord, 0)
 	err := refuel.GetAllFuelRecords(s.db, func(key uint64, record *refuel.RefuelRecord) {
-		newRecord := FuelRecord{*record, key}
+		newRecord := FuelRecord{*record, 0, key}
 		records = append(records, newRecord)
 	})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+
+	sort.Slice(records, func(i, j int) bool {
+		return records[i].TotalKM < records[j].TotalKM
+	})
+	for i := 1; i < len(records); i++ {
+		records[i].DrivenKM = records[i].TotalKM - records[i-1].TotalKM - records[i].IgnoreKM
 	}
 
 	js, err := json.Marshal(records)
