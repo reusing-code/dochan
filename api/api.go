@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/gob"
 	"encoding/json"
-	"flag"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -12,6 +11,8 @@ import (
 	"sort"
 	"strconv"
 	"time"
+
+	"github.com/namsral/flag"
 
 	"github.com/reusing-code/dochan/refuel"
 
