@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"encoding/gob"
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
 	"time"
@@ -27,8 +28,51 @@ type RefuelRecord struct {
 	IgnoreKM int       `json:"ignoreKM"`
 }
 
+// Equal compares Record data (ignoring ID)
+func (r *RefuelRecord) Equal(other *RefuelRecord) bool {
+	if !r.Date.Equal(other.Date) {
+		return false
+	}
+	if r.CostCent != other.CostCent {
+		return false
+	}
+
+	if r.TotalKM != other.TotalKM {
+		return false
+	}
+	if r.IgnoreKM != other.IgnoreKM {
+		return false
+	}
+	if math.Abs(float64(r.FuelKG-other.FuelKG)) > 0.001 {
+		return false
+	}
+	if math.Abs(float64(r.Lat-other.Lat)) > 0.00001 {
+		return false
+	}
+	if math.Abs(float64(r.Lon-other.Lon)) > 0.00001 {
+		return false
+	}
+
+	return true
+}
+
 func AddFuelRecord(db *database.DB, record *RefuelRecord) error {
-	err := db.Handle.Update(func(tx *bolt.Tx) error {
+	duplicateFound := false
+	err := GetAllFuelRecords(db, func(key uint64, other *RefuelRecord) {
+		if record.Equal(other) {
+			duplicateFound = true
+		}
+	})
+
+	if err != nil {
+		return err
+	}
+
+	if duplicateFound {
+		return nil
+	}
+
+	err = db.Handle.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket([]byte(fuelBucket))
 
 		keyInt, _ := bucket.NextSequence()
