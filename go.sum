@@ -30,7 +30,7 @@ github.com/jaytaylor/html2text v0.0.0-20180606194806-57d518f124b0 h1:xqgexXAGQgY
 github.com/jaytaylor/html2text v0.0.0-20180606194806-57d518f124b0/go.mod h1:CVKlgaMiht+LXvHG173ujK6JUhZXKb2u/BQtjPDIvyk=
 github.com/jhillyerd/enmime v0.4.0 h1:cxxx79gIUDBYFQY1mog6d7aKhFc5u7WqSj82N9oVemA=
 github.com/jhillyerd/enmime v0.4.0/go.mod h1:nquUBRmYirl49eDpg7AdgJgNi5WHW/6uL+RirCkhL3E=
-github.com/karrick/godirwalk v1.7.0 h1:5kuN1dcag2YLdYjdv+w+P8P9A6pmAoOKbLxZKZN38Xo=
+github.com/karrick/godirwalk v1.7.0 h1:TMJNLLzWq3N+DuzOTCt+9vmC3tQxuLfvtRtmV0Xe2GI=
 github.com/karrick/godirwalk v1.7.0/go.mod h1:svlOlzFUryGta1ycTmmd6C6ytFMtCkPvQ/4fj4EXtU4=
 github.com/kokardy/saxlike v0.0.0-20130927140548-8509aeb1f6e7 h1:4AHTkOtWBBgTYcKlD3BnCNf88+bgEGornj9Ru+NyOlc=
 github.com/kokardy/saxlike v0.0.0-20130927140548-8509aeb1f6e7/go.mod h1:kSof5NrquNIwxyac5naReoaekorCRMWIuPMBdiUkETQ=
