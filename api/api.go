@@ -135,6 +135,8 @@ func (s *server) start() error {
 	}
 	router.PathPrefix("/").Handler(http.FileServer(http.Dir(s.assetPath)))
 
+	router.Use(crossOriginMiddleware)
+
 	http.Handle("/", router)
 
 	log.Print((http.ListenAndServe(":"+strconv.Itoa(s.port), nil)))
@@ -153,8 +155,6 @@ func (s *server) searchHandler(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("Missing search query"))
 		return
 	}
-
-	w.Header().Add("Access-Control-Allow-Origin", "*")
 
 	searchKey := keys[0]
 
@@ -188,7 +188,6 @@ func (s *server) searchHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *server) documentHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Add("Access-Control-Allow-Origin", "*")
 	keyStr := mux.Vars(r)["key"]
 	i, err := strconv.ParseInt(keyStr, 10, 64)
 	if err != nil {
@@ -212,7 +211,6 @@ func (s *server) documentHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *server) downloadHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Add("Access-Control-Allow-Origin", "*")
 	keyStr := mux.Vars(r)["key"]
 	i, err := strconv.ParseInt(keyStr, 10, 64)
 	if err != nil {
@@ -287,4 +285,16 @@ func (s *server) fuelCSVHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+}
+
+func crossOriginMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", r.Header.Get("Origin"))
+		w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
 }
