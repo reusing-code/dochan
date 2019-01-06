@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"log"
+	"math"
 	"net/http"
 	"path/filepath"
 	"sort"
@@ -228,7 +229,30 @@ func (s *server) downloadHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write(f.RawData)
 }
 
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
 func (s *server) fuelHandler(w http.ResponseWriter, r *http.Request) {
+	page := int(1)
+	limit := int(math.MaxInt32)
+	pageParam := r.URL.Query().Get("page")
+	limitParam := r.URL.Query().Get("limit")
+	if pageParam != "" && limitParam != "" {
+		var err error
+		page, err = strconv.Atoi(pageParam)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+		}
+		limit, err = strconv.Atoi(limitParam)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+		}
+	}
+
 	records := make([]FuelRecord, 0)
 	err := refuel.GetAllFuelRecords(s.db, func(key uint64, record *refuel.RefuelRecord) {
 		newRecord := FuelRecord{*record, 0, key}
@@ -245,7 +269,13 @@ func (s *server) fuelHandler(w http.ResponseWriter, r *http.Request) {
 		records[i].DrivenKM = records[i].TotalKM - records[i-1].TotalKM - records[i].IgnoreKM
 	}
 
-	js, err := json.Marshal(records)
+	w.Header().Set("X-Total-Count", strconv.Itoa(len(records)))
+
+	start := min((page-1)*limit, len(records))
+	end := min(page*limit, len(records))
+	pagedRecords := records[start:end]
+
+	js, err := json.Marshal(pagedRecords)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -291,6 +321,7 @@ func crossOriginMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", r.Header.Get("Origin"))
 		w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+		w.Header().Set("Access-Control-Expose-Headers", "X-Total-Count")
 		if r.Method == "OPTIONS" {
 			w.WriteHeader(http.StatusOK)
 			return
