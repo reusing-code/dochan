@@ -263,10 +263,10 @@ func (s *server) fuelHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	sort.Slice(records, func(i, j int) bool {
-		return records[i].TotalKM < records[j].TotalKM
+		return records[i].TotalKM > records[j].TotalKM
 	})
-	for i := 1; i < len(records); i++ {
-		records[i].DrivenKM = records[i].TotalKM - records[i-1].TotalKM - records[i].IgnoreKM
+	for i := 0; i < len(records)-1; i++ {
+		records[i].DrivenKM = records[i].TotalKM - records[i+1].TotalKM - records[i].IgnoreKM
 	}
 
 	w.Header().Set("X-Total-Count", strconv.Itoa(len(records)))
