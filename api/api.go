@@ -8,6 +8,7 @@ import (
 	"log"
 	"math"
 	"net/http"
+	"os"
 	"path/filepath"
 	"sort"
 	"strconv"
@@ -23,6 +24,8 @@ import (
 	"github.com/reusing-code/dochan/searchTree"
 
 	"github.com/gorilla/mux"
+
+	_ "github.com/joho/godotenv/autoload"
 )
 
 type server struct {
@@ -60,11 +63,12 @@ type FuelRecord struct {
 func main() {
 	serv := &server{}
 	var dbPath string
-	flag.IntVar(&serv.port, "port", 8092, "Listening port")
-	flag.StringVar(&serv.dir, "path", "", "Document storage path")
-	flag.StringVar(&dbPath, "dbFile", "dochan.db", "DB File storage")
-	flag.StringVar(&serv.assetPath, "assetPath", "assets/", "Static assets to serve")
-	flag.Parse()
+	fs := flag.NewFlagSetWithEnvPrefix(os.Args[0], "DOCHAN", 0)
+	fs.IntVar(&serv.port, "port", 8092, "Listening port")
+	fs.StringVar(&serv.dir, "path", "", "Document storage path")
+	fs.StringVar(&dbPath, "dbFile", "dochan.db", "DB File storage")
+	fs.StringVar(&serv.assetPath, "assetPath", "assets/", "Static assets to serve")
+	fs.Parse(os.Args[1:])
 
 	var err error
 	serv.db, err = db.New(dbPath)

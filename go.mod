@@ -14,6 +14,7 @@ require (
 	github.com/gorilla/context v1.1.1 // indirect
 	github.com/gorilla/mux v1.6.2
 	github.com/jhillyerd/enmime v0.4.0
+	github.com/joho/godotenv v1.3.0
 	github.com/karrick/godirwalk v1.7.0
 	github.com/kokardy/saxlike v0.0.0-20130927140548-8509aeb1f6e7
 	github.com/mattn/go-colorable v0.0.9 // indirect
