@@ -34,6 +34,7 @@ type server struct {
 	search    *searchTree.SearchTree
 	db        *db.DB
 	assetPath string
+	secret    string
 }
 
 type SearchResult struct {
@@ -68,6 +69,7 @@ func main() {
 	fs.StringVar(&serv.dir, "path", "", "Document storage path")
 	fs.StringVar(&dbPath, "dbFile", "dochan.db", "DB File storage")
 	fs.StringVar(&serv.assetPath, "assetPath", "assets/", "Static assets to serve")
+	fs.StringVar(&serv.secret, "secret", "", "Secret used for authentication")
 	fs.Parse(os.Args[1:])
 
 	var err error
@@ -128,12 +130,16 @@ func (s *server) start() error {
 	router := mux.NewRouter()
 
 	clientSideRoutes := []string{"/about", "/document", "/search", "/fuel"}
-	router.HandleFunc("/api/documents", s.searchHandler)
-	router.HandleFunc("/api/documents/{key:[0-9]+}", s.documentHandler)
-	router.HandleFunc("/api/documents/{key:[0-9]+}/download", s.downloadHandler)
-	router.HandleFunc("/api/fuel", s.fuelHandler)
-	router.HandleFunc("/api/fuel/submit", s.fuelSubmitHandler)
-	router.HandleFunc("/api/fuel/csv", s.fuelCSVHandler)
+
+	apiRouter := router.PathPrefix("/api").Subrouter()
+	apiRouter.HandleFunc("/documents", s.searchHandler)
+	apiRouter.HandleFunc("/documents/{key:[0-9]+}", s.documentHandler)
+	apiRouter.HandleFunc("/documents/{key:[0-9]+}/download", s.downloadHandler)
+	apiRouter.HandleFunc("/fuel", s.fuelHandler)
+	apiRouter.HandleFunc("/fuel/submit", s.fuelSubmitHandler)
+	apiRouter.HandleFunc("/fuel/csv", s.fuelCSVHandler)
+	apiRouter.HandleFunc("/session/create", s.sessionCreateHandler)
+	apiRouter.Use(s.authenticationMiddleware)
 
 	for _, route := range clientSideRoutes {
 		router.PathPrefix(route).HandlerFunc(s.indexHandler)
@@ -321,6 +327,20 @@ func (s *server) fuelCSVHandler(w http.ResponseWriter, r *http.Request) {
 
 }
 
+func (s *server) sessionCreateHandler(w http.ResponseWriter, r *http.Request) {
+	buf, err := ioutil.ReadAll(r.Body)
+	secret := string(buf)
+	if err == nil && secret == s.secret {
+		session, err := s.db.CreateSession()
+		if err != nil {
+			http.Error(w, "Error creating session", http.StatusInternalServerError)
+		}
+		w.Header().Add("X-Session-Token", session)
+	} else {
+		http.Error(w, "Invalid credentials", http.StatusUnauthorized)
+	}
+}
+
 func crossOriginMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", r.Header.Get("Origin"))
@@ -331,5 +351,24 @@ func crossOriginMiddleware(next http.Handler) http.Handler {
 			return
 		}
 		next.ServeHTTP(w, r)
+	})
+}
+
+func (s *server) authenticationMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/api/session/create" {
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		session := r.Header.Get("X-Session-Token")
+		if session == "" || !s.db.GetSession(session) {
+			http.Error(w, "Invalid session", http.StatusUnauthorized)
+			return
+		} else {
+			next.ServeHTTP(w, r)
+			return
+		}
+
 	})
 }

@@ -2,6 +2,8 @@ package db
 
 import (
 	"bytes"
+	"crypto/rand"
+	"encoding/base64"
 	"encoding/binary"
 	"encoding/gob"
 	"errors"
@@ -26,9 +28,11 @@ type DBFile struct {
 }
 
 const (
-	hashBucket = "hashes"
-	hashKey    = "hashes"
-	fileBucket = "files"
+	hashBucket    = "hashes"
+	hashKey       = "hashes"
+	fileBucket    = "files"
+	sessionBucket = "session"
+	sessionBytes  = 64
 )
 
 func New(path string) (*DB, error) {
@@ -50,6 +54,10 @@ func New(path string) (*DB, error) {
 		_, err = tx.CreateBucketIfNotExists([]byte("fuel"))
 		if err != nil {
 			return fmt.Errorf("create bucket %q: %q", "fuel", err)
+		}
+		_, err = tx.CreateBucketIfNotExists([]byte(sessionBucket))
+		if err != nil {
+			return fmt.Errorf("create bucket %q: %q", sessionBucket, err)
 		}
 		return nil
 	})
@@ -192,6 +200,63 @@ func (db *DB) GetFile(key uint64) (*DBFile, error) {
 		return nil, err
 	}
 	return f, nil
+}
+
+func (db *DB) CreateSession() (string, error) {
+	key := make([]byte, sessionBytes)
+	_, err := rand.Read(key)
+	if err != nil {
+		return "", err
+	}
+
+	err = db.Handle.Update(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket([]byte(sessionBucket))
+		err := bucket.Put(key, []byte(""))
+		return err
+	})
+	if err != nil {
+		return "", err
+	}
+
+	baseEncoded := base64.URLEncoding.EncodeToString(key)
+
+	return baseEncoded, nil
+}
+
+func (db *DB) DestroySession(baseKey string) error {
+	key, err := base64.URLEncoding.DecodeString(baseKey)
+	if err != nil {
+		return err
+	}
+	err = db.Handle.Update(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket([]byte(sessionBucket))
+		return bucket.Delete(key)
+	})
+
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (db *DB) GetSession(baseKey string) bool {
+	key, err := base64.URLEncoding.DecodeString(baseKey)
+	if err != nil {
+		return false
+	}
+	sessionFound := false
+	db.Handle.View(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket([]byte(sessionBucket))
+		b := bucket.Get(key)
+		if b == nil {
+			return nil
+		}
+		sessionFound = true
+		return nil
+
+	})
+
+	return sessionFound
 }
 
 func Itob(v uint64) []byte {
