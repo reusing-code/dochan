@@ -350,6 +350,7 @@ func crossOriginMiddleware(next http.Handler) http.Handler {
 		w.Header().Set("Access-Control-Allow-Origin", r.Header.Get("Origin"))
 		w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
 		w.Header().Set("Access-Control-Expose-Headers", "X-Total-Count, X-Session-Token")
+		w.Header().Set("Access-Control-Allow-Headers", "X-Session-Token")
 		if r.Method == "OPTIONS" {
 			w.WriteHeader(http.StatusOK)
 			return
