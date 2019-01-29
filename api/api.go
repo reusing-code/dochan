@@ -131,7 +131,7 @@ func (s *server) init() error {
 func (s *server) start() error {
 	router := mux.NewRouter()
 
-	clientSideRoutes := []string{"/about", "/document", "/search", "/fuel"}
+	clientSideRoutes := []string{"/about", "/logn", "/document", "/search", "/fuel"}
 
 	apiRouter := router.PathPrefix("/api").Subrouter()
 	apiRouter.HandleFunc("/documents", s.searchHandler)
