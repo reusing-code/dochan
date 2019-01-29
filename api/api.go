@@ -340,6 +340,7 @@ func (s *server) sessionCreateHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Error creating session", http.StatusInternalServerError)
 		}
 		w.Header().Add("X-Session-Token", session)
+		w.Write([]byte("{}"))
 	} else {
 		http.Error(w, "Invalid credentials", http.StatusUnauthorized)
 	}
