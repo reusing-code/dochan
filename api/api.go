@@ -14,6 +14,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/gorilla/handlers"
+
 	"github.com/namsral/flag"
 
 	"github.com/reusing-code/dochan/refuel"
@@ -148,7 +150,9 @@ func (s *server) start() error {
 
 	router.Use(crossOriginMiddleware)
 
-	http.Handle("/", router)
+	loggedRouter := handlers.LoggingHandler(os.Stdout, router)
+
+	http.Handle("/", loggedRouter)
 
 	log.Print((http.ListenAndServe(":"+strconv.Itoa(s.port), nil)))
 	return nil

@@ -12,6 +12,7 @@ require (
 	github.com/flynn-archive/go-shlex v0.0.0-20150515145356-3f9db97f8568 // indirect
 	github.com/google/uuid v1.1.0
 	github.com/gorilla/context v1.1.1 // indirect
+	github.com/gorilla/handlers v1.4.0
 	github.com/gorilla/mux v1.6.2
 	github.com/jhillyerd/enmime v0.4.0
 	github.com/joho/godotenv v1.3.0
