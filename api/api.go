@@ -191,6 +191,8 @@ func (s *server) searchHandler(w http.ResponseWriter, r *http.Request) {
 		docs = append(docs, doc)
 	}
 
+	sort.Slice(docs, func(i, j int) bool { return docs[i].Filename < docs[j].Filename })
+
 	result := SearchResult{Count: len(res.GetRes()), Time: elapsed.String(), Res: docs}
 	js, err := json.Marshal(result)
 	if err != nil {
