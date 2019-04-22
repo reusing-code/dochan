@@ -1,16 +1,14 @@
 package refuel
 
 import (
-	"bufio"
 	"bytes"
+	"encoding/binary"
 	"encoding/gob"
+	"errors"
 	"fmt"
-	"strconv"
-	"strings"
 	"time"
 
 	bolt "github.com/coreos/bbolt"
-	database "github.com/reusing-code/dochan/db"
 )
 
 const (
@@ -27,13 +25,48 @@ type RefuelRecord struct {
 	IgnoreKM int       `json:"ignoreKM"`
 }
 
-func AddFuelRecord(db *database.DB, record *RefuelRecord) error {
+type DB struct {
+	Handle *bolt.DB
+}
+
+const (
+	bucket = "fuel"
+)
+
+func New(path string) (*DB, error) {
+	result := &DB{}
+	var err error
+	result.Handle, err = bolt.Open(path, 0644, nil)
+	if err != nil {
+		return nil, err
+	}
+	err = result.Handle.Update(func(tx *bolt.Tx) error {
+		_, err := tx.CreateBucketIfNotExists([]byte(bucket))
+		if err != nil {
+			return fmt.Errorf("create bucket %q: %q", bucket, err)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
+func (db *DB) Close() error {
+	if db != nil && db.Handle != nil {
+		return db.Handle.Close()
+	}
+	return errors.New("No DB")
+}
+
+func (db *DB) AddFuelRecord(record *RefuelRecord) error {
 	err := db.Handle.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket([]byte(fuelBucket))
 
 		keyInt, _ := bucket.NextSequence()
 
-		key := database.Itob(keyInt)
+		key := Itob(keyInt)
 
 		buf := &bytes.Buffer{}
 		enc := gob.NewEncoder(buf)
@@ -53,11 +86,11 @@ func AddFuelRecord(db *database.DB, record *RefuelRecord) error {
 	return nil
 }
 
-func GetFuelRecord(db *database.DB, key uint64) (*RefuelRecord, error) {
+func (db *DB) GetFuelRecord(key uint64) (*RefuelRecord, error) {
 	r := &RefuelRecord{}
 	err := db.Handle.View(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket([]byte(fuelBucket))
-		b := bucket.Get(database.Itob(key))
+		b := bucket.Get(Itob(key))
 		if b == nil {
 			return fmt.Errorf("Document with key %v not found", key)
 		}
@@ -77,7 +110,7 @@ func GetFuelRecord(db *database.DB, key uint64) (*RefuelRecord, error) {
 	return r, nil
 }
 
-func GetAllFuelRecords(db *database.DB, cb func(key uint64, record *RefuelRecord)) error {
+func (db *DB) GetAllFuelRecords(cb func(key uint64, record *RefuelRecord)) error {
 	err := db.Handle.View(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket([]byte(fuelBucket))
 		err := bucket.ForEach(func(k, v []byte) error {
@@ -88,7 +121,7 @@ func GetAllFuelRecords(db *database.DB, cb func(key uint64, record *RefuelRecord
 			if err != nil {
 				return err
 			}
-			cb(database.Btoi(k), &r)
+			cb(Btoi(k), &r)
 			return nil
 
 		})
@@ -104,44 +137,12 @@ func GetAllFuelRecords(db *database.DB, cb func(key uint64, record *RefuelRecord
 	return nil
 }
 
-func ParseCSV(db *database.DB, csv []byte) error {
-	buf := bytes.NewBuffer(csv)
-	scanner := bufio.NewScanner(buf)
-	for scanner.Scan() {
-		line := scanner.Text()
-		tokens := strings.Split(line, ";")
-		if len(tokens) < 4 {
-			continue
-		}
-		cents, err := strconv.ParseInt(strings.Replace(tokens[1], ",", "", -1), 10, 32)
-		if err != nil {
-			return err
-		}
-		kg, err := strconv.ParseFloat(strings.Replace(tokens[2], ",", ".", -1), 32)
-		if err != nil {
-			return err
-		}
-		km, err := strconv.ParseInt(tokens[3], 10, 32)
-		if err != nil {
-			return err
-		}
-		if tokens[4] == "" {
-			tokens[4] = "0"
-		}
-		ikm, err := strconv.ParseInt(tokens[4], 10, 32)
-		if err != nil {
-			return err
-		}
-		date, err := time.Parse("02.01.2006", tokens[0])
-		if err != nil {
-			return err
-		}
-		record := &RefuelRecord{Date: date, CostCent: int(cents),
-			FuelKG: float32(kg), TotalKM: int(km), Lat: 0, Lon: 0, IgnoreKM: int(ikm)}
-		err = AddFuelRecord(db, record)
-		if err != nil {
-			return nil
-		}
-	}
-	return nil
+func Itob(v uint64) []byte {
+	b := make([]byte, 8)
+	binary.BigEndian.PutUint64(b, v)
+	return b
+}
+
+func Btoi(b []byte) uint64 {
+	return binary.BigEndian.Uint64(b)
 }

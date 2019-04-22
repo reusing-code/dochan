@@ -4,9 +4,7 @@ import (
 	"bytes"
 	"encoding/gob"
 	"encoding/json"
-	"io/ioutil"
 	"log"
-	"math"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -14,11 +12,11 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/reusing-code/dochan/refuel"
+
 	"github.com/gorilla/handlers"
 
 	"github.com/namsral/flag"
-
-	"github.com/reusing-code/dochan/refuel"
 
 	"github.com/reusing-code/dochan/db"
 	"github.com/reusing-code/dochan/parser"
@@ -35,6 +33,7 @@ type server struct {
 	dir       string
 	search    *searchTree.SearchTree
 	db        *db.DB
+	dbPath    string
 	assetPath string
 	secret    string
 }
@@ -57,25 +56,18 @@ type ResponseDocument struct {
 	RawContent []byte `json:"content"`
 }
 
-type FuelRecord struct {
-	refuel.RefuelRecord
-	DrivenKM int    `json:"drivenKM"`
-	ID       uint64 `json:"id"`
-}
-
 func main() {
 	serv := &server{}
-	var dbPath string
 	fs := flag.NewFlagSetWithEnvPrefix(os.Args[0], "DOCHAN", 0)
 	fs.IntVar(&serv.port, "port", 8092, "Listening port")
 	fs.StringVar(&serv.dir, "path", "", "Document storage path")
-	fs.StringVar(&dbPath, "dbFile", "dochan.db", "DB File storage")
+	fs.StringVar(&serv.dbPath, "dbFile", "dochan", "DB File storage base name")
 	fs.StringVar(&serv.assetPath, "assetPath", "assets/", "Static assets to serve")
 	fs.StringVar(&serv.secret, "secret", "", "Secret used for authentication")
 	fs.Parse(os.Args[1:])
 
 	var err error
-	serv.db, err = db.New(dbPath)
+	serv.db, err = db.New(serv.dbPath + ".documents.db")
 
 	if err != nil {
 		log.Fatal(err)
@@ -131,17 +123,24 @@ func (s *server) init() error {
 func (s *server) start() error {
 	router := mux.NewRouter()
 
-	clientSideRoutes := []string{"/about", "/logn", "/document", "/search", "/fuel"}
+	session, err := NewSessionHandler(s.dbPath+".session.db", s.secret)
+	if err != nil {
+		return err
+	}
+
+	clientSideRoutes := []string{"/about", "/login", "/document", "/search", "/fuel"}
 
 	apiRouter := router.PathPrefix("/api").Subrouter()
 	apiRouter.HandleFunc("/documents", s.searchHandler)
 	apiRouter.HandleFunc("/documents/{key:[0-9]+}", s.documentHandler)
 	apiRouter.HandleFunc("/documents/{key:[0-9]+}/download", s.downloadHandler)
-	apiRouter.HandleFunc("/fuel", s.fuelHandler)
-	apiRouter.HandleFunc("/fuel/submit", s.fuelSubmitHandler)
-	apiRouter.HandleFunc("/fuel/csv", s.fuelCSVHandler)
-	apiRouter.HandleFunc("/session/create", s.sessionCreateHandler)
-	apiRouter.Use(s.authenticationMiddleware)
+	apiRouter.HandleFunc("/session/create", session.sessionCreateHandler)
+	fuelRouter := apiRouter.PathPrefix("/fuel").Subrouter()
+	err = refuel.Register(s.dbPath+".fuel.db", fuelRouter)
+	if err != nil {
+		return err
+	}
+	apiRouter.Use(session.authenticationMiddleware)
 
 	for _, route := range clientSideRoutes {
 		router.PathPrefix(route).HandlerFunc(s.indexHandler)
@@ -245,109 +244,6 @@ func (s *server) downloadHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write(f.RawData)
 }
 
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}
-
-func (s *server) fuelHandler(w http.ResponseWriter, r *http.Request) {
-	page := int(1)
-	limit := int(math.MaxInt32)
-	pageParam := r.URL.Query().Get("page")
-	limitParam := r.URL.Query().Get("limit")
-	if pageParam != "" && limitParam != "" {
-		var err error
-		page, err = strconv.Atoi(pageParam)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-		}
-		limit, err = strconv.Atoi(limitParam)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-		}
-	}
-
-	records := make([]FuelRecord, 0)
-	err := refuel.GetAllFuelRecords(s.db, func(key uint64, record *refuel.RefuelRecord) {
-		newRecord := FuelRecord{*record, 0, key}
-		records = append(records, newRecord)
-	})
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
-
-	sort.Slice(records, func(i, j int) bool {
-		return records[i].TotalKM > records[j].TotalKM
-	})
-	for i := 0; i < len(records)-1; i++ {
-		records[i].DrivenKM = records[i].TotalKM - records[i+1].TotalKM - records[i].IgnoreKM
-	}
-
-	w.Header().Set("X-Total-Count", strconv.Itoa(len(records)))
-
-	start := min((page-1)*limit, len(records))
-	end := min(page*limit, len(records))
-	pagedRecords := records[start:end]
-
-	js, err := json.Marshal(pagedRecords)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.Write(js)
-}
-
-func (s *server) fuelSubmitHandler(w http.ResponseWriter, r *http.Request) {
-	var record refuel.RefuelRecord
-	buf, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	err = json.Unmarshal(buf, &record)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	err = refuel.AddFuelRecord(s.db, &record)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-}
-
-func (s *server) fuelCSVHandler(w http.ResponseWriter, r *http.Request) {
-	b, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	err = refuel.ParseCSV(s.db, b)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-}
-
-func (s *server) sessionCreateHandler(w http.ResponseWriter, r *http.Request) {
-	buf, err := ioutil.ReadAll(r.Body)
-	secret := string(buf)
-	if err == nil && secret == s.secret {
-		session, err := s.db.CreateSession()
-		if err != nil {
-			http.Error(w, "Error creating session", http.StatusInternalServerError)
-		}
-		w.Header().Add("X-Session-Token", session)
-		w.Write([]byte("{}"))
-	} else {
-		http.Error(w, "Invalid credentials", http.StatusUnauthorized)
-	}
-}
-
 func crossOriginMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", r.Header.Get("Origin"))
@@ -359,24 +255,5 @@ func crossOriginMiddleware(next http.Handler) http.Handler {
 			return
 		}
 		next.ServeHTTP(w, r)
-	})
-}
-
-func (s *server) authenticationMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/api/session/create" {
-			next.ServeHTTP(w, r)
-			return
-		}
-
-		session := r.Header.Get("X-Session-Token")
-		if session == "" || !s.db.GetSession(session) {
-			http.Error(w, "Invalid session", http.StatusUnauthorized)
-			return
-		} else {
-			next.ServeHTTP(w, r)
-			return
-		}
-
 	})
 }
